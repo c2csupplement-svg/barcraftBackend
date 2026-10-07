@@ -1,6 +1,12 @@
 import { Schema, model } from "mongoose";
 
+const {ObjectId} = Schema
+
 const productSchema = new Schema({
+    categoryId:{
+        type: ObjectId,
+        ref:"Product category"
+    },
     name: {
         type: String
     },

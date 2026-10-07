@@ -5,12 +5,12 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js
 export const addProduct = async (req, res) => {
     try {
 
-        const { name, slug, des, price, discountedPrice, overView, faq, seo, shortDes, status } = req.body;
+        const {categoryId, name, slug, des, price, discountedPrice, overView, faq, seo, shortDes, status } = req.body;
 
         const featureImage = req.files?.featureImage?.[0];
         const images = req.files?.image || [];
 
-        if (!name?.trim() || !slug?.trim() || !des?.trim() || !price || !discountedPrice || !overView?.trim() || !shortDes?.trim()) {
+        if (categoryId?.trim() || !name?.trim() || !slug?.trim() || !des?.trim() || !price || !discountedPrice || !overView?.trim() || !shortDes?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Send all required values"
@@ -93,6 +93,7 @@ export const addProduct = async (req, res) => {
         }
 
         const productDetails = await ProductModel.create({
+            categoryId: categoryId.trim(),
             name: name.trim(),
             slug: slug.trim(),
             des: des.trim(),
@@ -136,7 +137,7 @@ export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const { name, slug, des, price, discountedPrice, overView, faq, seo, shortDes, status } = req.body;
+        const {categoryId, name, slug, des, price, discountedPrice, overView, faq, seo, shortDes, status } = req.body;
 
         const product = await ProductModel.findById(id);
 
@@ -147,7 +148,7 @@ export const updateProduct = async (req, res) => {
             });
         }
 
-        if (!name?.trim() || !slug?.trim() || !des?.trim() || !price || !discountedPrice || !overView?.trim() || !shortDes?.trim()) {
+        if (categoryId?.trim() || !name?.trim() || !slug?.trim() || !des?.trim() || !price || !discountedPrice || !overView?.trim() || !shortDes?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Send all required values"
@@ -240,6 +241,7 @@ export const updateProduct = async (req, res) => {
         const updatedProduct = await ProductModel.findByIdAndUpdate(
             id,
             {
+                categoryId: categoryId.trim(),
                 name: name.trim(),
                 slug: slug.trim(),
                 des: des.trim(),
@@ -307,9 +309,9 @@ export const deleteProduct = async (req, res) => {
 
         await ProductModel.findByIdAndDelete(id);
 
-        if (product.featuredImage) {
+        if (product.featureImage) {
             try {
-                await deleteFromCloudinary(product.featuredImage);
+                await deleteFromCloudinary(product.featureImage);
             } catch (error) {
                 console.error(
                     "Failed to delete featured image:",
