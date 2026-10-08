@@ -1,48 +1,17 @@
 import { Schema, model } from "mongoose";
 
-const { ObjectId } = Schema
+const {ObjectId} = Schema;
 
-const productSchema = new Schema({
-    categoryId: {
-        type: ObjectId,
-        ref: "Product category"
+const recipeSchema = new Schema({
+    categoryId:{
+        type:ObjectId,
+        ref:"RecipeCategory"
     },
-    name: {
-        type: String
-    },
-    slug: {
-        type: String,
-        unique: true
-    },
-    description: {
-        type: String,
-    },
-    shortDes: {
-        type: String
-    },
-    featureImage: {
-        type: String
-    },
-    image: String,
-    flavour: {
-        name: String,
-        des: String
-    },
-    serve: String,
-    spirits: [String],
-    pairs: [String],
-    nutrition: [{
-        name: String,
-        value: String
-    }],
-    intgredient: [{
-        name: String,
-        value: String
-    }],
-    variants: [{
-        name: String,
-        image: String,
-    }],
+    name:String,
+    slug:String,
+    image:String,
+    ingredient:[String],
+    makestep:[String],
     seo: {
         metaTitle: {
             type: String,
@@ -122,31 +91,9 @@ const productSchema = new Schema({
             trim: true,
         },
     },
-    faq: [
-        {
-            question: {
-                type: String
-            },
-            answer: {
-                type: String
-            }
-        }
-    ],
-    review: [{
-        name: String,
-        rating: Number,
-        des: String,
-        image: [String]
-    }],
-    status: {
-        type: Boolean,
-        default: true,
-        enum: [false, true]
-    }
-},
-    { timestamps: true }
-);
+}, {timestamps: true});
 
-const productModel = model("Products", productSchema);
 
-export default productModel
+const recipeModel = model("Recipe", recipeSchema);
+
+export default recipeModel;
