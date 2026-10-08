@@ -1,4 +1,4 @@
-import ProductModel from "../models/product.model";
+import ProductModel from "../models/product.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 export const addProduct = async (req, res) => {
