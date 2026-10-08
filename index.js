@@ -10,6 +10,7 @@ import BlogCategoryRouter from "./src/router/blogCategory.route.js";
 import ContactRouter from "./src/router/contact.route.js";
 import FaqRouter from "./src/router/faq.route.js";
 import InstagramRouter from "./src/router/instagram.route.js"
+import BookingRouter from "./src/router/booking.route.js"
 
 dotenv.config();
 databaseConfig();
@@ -37,6 +38,7 @@ app.use("/barcraft/api/blogcategory", BlogCategoryRouter);
 app.use("/barcraft/api/contact", ContactRouter);
 app.use("/barcraft/api/faq", FaqRouter);
 app.use("/barcraft/api/instagram", InstagramRouter);
+app.use("/barcraft/api/booking", BookingRouter);
 
 app.listen(port, () => {console.log(`Server run on PORT: ${port}`)})
 
