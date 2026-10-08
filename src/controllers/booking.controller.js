@@ -112,3 +112,61 @@ export const deleteBooking = async (req, res) => {
         return res.status(500).json({success:false, message: err.message})
     }
 }
+
+export const searchBooking = async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q || !q.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required."
+            });
+        }
+
+        const search = q.trim();
+
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+
+        const skip = (page - 1) * limit;
+
+        const searchQuery = {
+            $or: [
+                { name: { $regex: search, $options: "i" } },
+                { phone: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { venue: { $regex: search, $options: "i" } },
+                { address: { $regex: search, $options: "i" } },
+                { date: { $regex: search, $options: "i" } }
+            ]
+        };
+
+        const [bookings, total] = await Promise.all([
+            BookingModel.find(searchQuery)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            BookingModel.countDocuments(searchQuery)
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            count: bookings.length,
+            total,
+            page,
+            limit,
+            totalPages,
+            bookings
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};

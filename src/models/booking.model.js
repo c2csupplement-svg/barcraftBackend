@@ -13,7 +13,7 @@ const bookingSchema = new Schema({
     status:{
         type:String,
         default: "Processing",
-        enum:["Processing", "Confirm", "Done", "Cancelled"]
+        enum:["Processing", "Confirm", "Done", "Cancelled", "Reject"]
     }
 }, {timestamps: true});
 
