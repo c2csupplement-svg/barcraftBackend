@@ -9,6 +9,7 @@ export const addProduct = async (req, res) => {
 
         const featureImage = req.files?.featureImage?.[0];
         const images = req.files?.image?.[0];
+        const bottleImage = req.files?.bottle?.[0];
 
         if (!categoryId?.trim() || !name?.trim() || !slug?.trim() || !description?.trim() || !shortDes?.trim() || !serve?.trim()) {
             return res.status(400).json({
@@ -24,7 +25,7 @@ export const addProduct = async (req, res) => {
             });
         }
 
-        if (!images || !featureImage) {
+        if (!images || !featureImage || !bottleImage) {
             return res.status(400).json({
                 success: false,
                 message: "Mobile and Desktop product images are both required"
@@ -85,6 +86,11 @@ export const addProduct = async (req, res) => {
             `${name.trim()}-feature`
         );
 
+        const bottleImageResult = await uploadToCloudinary(
+            bottleImage.buffer,
+            `${name.trim()}-bottle`
+        )
+
         const product = await ProductModel.create({
             categoryId: categoryId.trim(),
             name: name.trim(),
@@ -94,6 +100,7 @@ export const addProduct = async (req, res) => {
             serve: serve.trim(),
             image: imageResult.secure_url,
             featureImage: featureImageResult.secure_url,
+            bottleImage: bottleImageResult.secure_url,
             flavour: parseFlavour,
             spirits: parseSpirits,
             pairs: parsePairs,
@@ -131,6 +138,7 @@ export const updateProduct = async (req, res) => {
 
         const featureImage = req.files?.featureImage?.[0];
         const image = req.files?.image?.[0];
+        const bottleImage = req.files?.[0];
 
         if (!id.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
@@ -216,7 +224,9 @@ export const updateProduct = async (req, res) => {
                 `${name.trim()}-feature`
             );
 
-            await deleteFromCloudinary(oldFeaturedImage)
+            if(oldFeaturedImage){
+                await deleteFromCloudinary(oldFeaturedImage)
+            }
         };
         if (image) {
             const oldImage = productDetails.image;
@@ -226,8 +236,22 @@ export const updateProduct = async (req, res) => {
                 `${name.trim()}-image`
             );
 
-            await deleteFromCloudinary(oldImage)
+            if(oldImage){
+                await deleteFromCloudinary(oldImage)
+            }
         };
+        if(bottleImage){
+            const oldImage = productDetails.bottleImage;
+
+            productDetails.bottleImage = await uploadToCloudinary(
+                bottleImage.buffer,
+                `${name.trim()}-bottle`
+            );
+
+            if(oldImage){
+                await deleteFromCloudinary(oldImage)
+            }
+        }
         if (status !== undefined) {
             productDetails.status = status
         };
