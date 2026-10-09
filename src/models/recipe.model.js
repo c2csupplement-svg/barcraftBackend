@@ -91,6 +91,11 @@ const recipeSchema = new Schema({
             trim: true,
         },
     },
+    status:{
+        type:Boolean,
+        default:true,
+        enum:[true, false]
+    }
 }, {timestamps: true});
 
 

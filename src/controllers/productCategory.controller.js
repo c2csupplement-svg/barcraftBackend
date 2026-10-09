@@ -1,15 +1,15 @@
-import ProductCategoryModel from "../models/productCategory.model";
-import ProductModel from "../models/product.model";
+import ProductCategoryModel from "../models/productCategory.model.js";
+import ProductModel from "../models/product.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 
 export const addProductCategory = async (req, res) => {
     try {
-        const { name, shortdes, status } = req.body;
+        const { name, slug, shortdes, status } = req.body;
 
         const mobile = req.files?.mobileImg?.[0];
         const desktop = req.files?.desktopImg?.[0];
 
-        if (!name.trim() || !shortdes.trim()) {
+        if (!name.trim() || !shortdes.trim() || !slug.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Name and Short Description both required."
@@ -23,6 +23,13 @@ export const addProductCategory = async (req, res) => {
             });
         };
 
+
+         const productCategory = await ProductCategoryModel.findOne({slug:slug});
+
+         if(productCategory){
+            return res.status(400).json({success:false, message: "Duplicate Slug"});
+         }
+
         const mobileResult = await uploadToCloudinary(
             mobile.buffer,
             `${title.trim()}-mobile`
@@ -33,8 +40,9 @@ export const addProductCategory = async (req, res) => {
             `${title.trim()}-desktop`
         );
 
-        const productCategory = await ProductCategoryModel({
+        await ProductCategoryModel({
             name: name.trim(),
+            slug:slug.trim(),
             shortdes: shortdes.trim(),
             desktopImage: desktopResult.secure_url,
             mobileImage: mobileResult.secure_url,
@@ -53,7 +61,7 @@ export const updateProductCategory = async (req, res) => {
 
         const {id} = req.params;
 
-        const { name, shortdes, status} = req.body;
+        const { name, shortdes, slug, status} = req.body;
 
         const mobile = req.files?.mobileImg?.[0];
         const desktop = req.files?.desktopImg?.[0];
@@ -117,6 +125,10 @@ export const updateProductCategory = async (req, res) => {
 
         if(name.trim()){
             categoryDetails.name = name.trim();
+        }
+
+        if(slug.trim()){
+            categoryDetails.slug = slug.trim();
         }
 
         if(shortdes.trim()){

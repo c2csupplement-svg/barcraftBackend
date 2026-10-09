@@ -24,6 +24,7 @@ const productSchema = new Schema({
         type: String
     },
     image: String,
+    bottleImage:String,
     flavour: {
         name: String,
         des: String

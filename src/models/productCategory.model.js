@@ -2,6 +2,7 @@ import { Schema, model } from "mongoose";
 
 const productCategorySchema = new Schema({
     name:String,
+    slug: String,
     shortdes:String,
     desktopImage : String,
     mobileImage:String,

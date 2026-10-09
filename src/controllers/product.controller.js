@@ -1,4 +1,5 @@
 import ProductModel from "../models/product.model.js";
+import ProductCategoryModel from "../models/productCategory.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 export const addProduct = async (req, res) => {
@@ -8,6 +9,7 @@ export const addProduct = async (req, res) => {
 
         const featureImage = req.files?.featureImage?.[0];
         const images = req.files?.image?.[0];
+        const bottleImage = req.files?.bottle?.[0];
 
         if (!categoryId?.trim() || !name?.trim() || !slug?.trim() || !description?.trim() || !shortDes?.trim() || !serve?.trim()) {
             return res.status(400).json({
@@ -23,7 +25,7 @@ export const addProduct = async (req, res) => {
             });
         }
 
-        if (!images || !featureImage) {
+        if (!images || !featureImage || !bottleImage) {
             return res.status(400).json({
                 success: false,
                 message: "Mobile and Desktop product images are both required"
@@ -84,6 +86,11 @@ export const addProduct = async (req, res) => {
             `${name.trim()}-feature`
         );
 
+        const bottleImageResult = await uploadToCloudinary(
+            bottleImage.buffer,
+            `${name.trim()}-bottle`
+        )
+
         const product = await ProductModel.create({
             categoryId: categoryId.trim(),
             name: name.trim(),
@@ -93,6 +100,7 @@ export const addProduct = async (req, res) => {
             serve: serve.trim(),
             image: imageResult.secure_url,
             featureImage: featureImageResult.secure_url,
+            bottleImage: bottleImageResult.secure_url,
             flavour: parseFlavour,
             spirits: parseSpirits,
             pairs: parsePairs,
@@ -130,6 +138,7 @@ export const updateProduct = async (req, res) => {
 
         const featureImage = req.files?.featureImage?.[0];
         const image = req.files?.image?.[0];
+        const bottleImage = req.files?.[0];
 
         if (!id.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
@@ -215,7 +224,9 @@ export const updateProduct = async (req, res) => {
                 `${name.trim()}-feature`
             );
 
-            await deleteFromCloudinary(oldFeaturedImage)
+            if(oldFeaturedImage){
+                await deleteFromCloudinary(oldFeaturedImage)
+            }
         };
         if (image) {
             const oldImage = productDetails.image;
@@ -225,8 +236,22 @@ export const updateProduct = async (req, res) => {
                 `${name.trim()}-image`
             );
 
-            await deleteFromCloudinary(oldImage)
+            if(oldImage){
+                await deleteFromCloudinary(oldImage)
+            }
         };
+        if(bottleImage){
+            const oldImage = productDetails.bottleImage;
+
+            productDetails.bottleImage = await uploadToCloudinary(
+                bottleImage.buffer,
+                `${name.trim()}-bottle`
+            );
+
+            if(oldImage){
+                await deleteFromCloudinary(oldImage)
+            }
+        }
         if (status !== undefined) {
             productDetails.status = status
         };
@@ -290,7 +315,7 @@ export const updateProductStatus = async (req, res) => {
 export const getProductByAdmin = async (req, res) => {
     try {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -321,7 +346,7 @@ export const getProductByAdmin = async (req, res) => {
 export const getProduct = async (req, res) => {
     try {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -375,7 +400,7 @@ export const getProductbyCategoryId = async (req, res) => {
         const { id } = req.params;
 
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -385,12 +410,12 @@ export const getProductbyCategoryId = async (req, res) => {
 
         const [product, total] = await Promise.all([
             ProductModel.find({
-                categoryId:id,
-                status:true
+                categoryId: id,
+                status: true
             })
-            .sort({createdAt: -1})
-            .skip(skip)
-            .limit(limit),
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
 
             ProductModel.countDocuments()
         ])
@@ -408,5 +433,110 @@ export const getProductbyCategoryId = async (req, res) => {
     }
     catch (err) {
         return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export const searchProduct = async (req, res) => {
+    try {
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const { q } = req.query;
+
+        if (!q || !q.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required."
+            })
+        }
+
+        const skip = (page - 1) * limit;
+
+        const search = q.trim();
+
+        const searchRegex = new RegExp(query, "i");
+
+        const categories = await ProductCategoryModel.find({
+            $or: [
+                { name: searchRegex },
+                { slug: searchRegex }
+            ]
+        }).select("_id");
+
+        const categoryIds = categories.map(categoryId => categoryId._id);
+
+        const filter = {
+            $or: [
+                { name: searchRegex },
+                { slug: searchRegex },
+                { categoryId: { $in: categoryIds } },
+            ]
+        };
+
+        const [products, total] = await Promise.all([
+            ProductModel.find(filter)
+                .populate("categoryId")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            ProductModel.countDocuments(filter)
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            products,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export const getProductByCategorySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const skip = (page - 1) * limit;
+
+        if (!slug.trim()) {
+            return res.status(400).json({ success: false, message: "Slug is required." });
+        };
+
+        const categoryId = await ProductCategoryModel.findOne({ slug: slug })?._id;
+
+        const [products, total] = await Promise.all([
+            ProductModel.find({ categoryId: categoryId })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            ProductModel.countDocuments({ categoryId: categoryId })
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            products,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        })
+    }
+    catch (err) {
+        return req.status(500).json({ success: false, message: err.message })
     }
 }
