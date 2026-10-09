@@ -1,4 +1,5 @@
 import ProductModel from "../models/product.model.js";
+import ProductCategoryModel from "../models/productCategory.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 export const addProduct = async (req, res) => {
@@ -290,7 +291,7 @@ export const updateProductStatus = async (req, res) => {
 export const getProductByAdmin = async (req, res) => {
     try {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -321,7 +322,7 @@ export const getProductByAdmin = async (req, res) => {
 export const getProduct = async (req, res) => {
     try {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -375,7 +376,7 @@ export const getProductbyCategoryId = async (req, res) => {
         const { id } = req.params;
 
         const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
@@ -385,12 +386,12 @@ export const getProductbyCategoryId = async (req, res) => {
 
         const [product, total] = await Promise.all([
             ProductModel.find({
-                categoryId:id,
-                status:true
+                categoryId: id,
+                status: true
             })
-            .sort({createdAt: -1})
-            .skip(skip)
-            .limit(limit),
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
 
             ProductModel.countDocuments()
         ])
@@ -408,5 +409,110 @@ export const getProductbyCategoryId = async (req, res) => {
     }
     catch (err) {
         return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export const searchProduct = async (req, res) => {
+    try {
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const { q } = req.query;
+
+        if (!q || !q.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required."
+            })
+        }
+
+        const skip = (page - 1) * limit;
+
+        const search = q.trim();
+
+        const searchRegex = new RegExp(query, "i");
+
+        const categories = await ProductCategoryModel.find({
+            $or: [
+                { name: searchRegex },
+                { slug: searchRegex }
+            ]
+        }).select("_id");
+
+        const categoryIds = categories.map(categoryId => categoryId._id);
+
+        const filter = {
+            $or: [
+                { name: searchRegex },
+                { slug: searchRegex },
+                { categoryId: { $in: categoryIds } },
+            ]
+        };
+
+        const [products, total] = await Promise.all([
+            ProductModel.find(filter)
+                .populate("categoryId")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            ProductModel.countDocuments(filter)
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            products,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+export const getProductByCategorySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const skip = (page - 1) * limit;
+
+        if (!slug.trim()) {
+            return res.status(400).json({ success: false, message: "Slug is required." });
+        };
+
+        const categoryId = await ProductCategoryModel.findOne({ slug: slug })?._id;
+
+        const [products, total] = await Promise.all([
+            ProductModel.find({ categoryId: categoryId })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+
+            ProductModel.countDocuments({ categoryId: categoryId })
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            products,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        })
+    }
+    catch (err) {
+        return req.status(500).json({ success: false, message: err.message })
     }
 }

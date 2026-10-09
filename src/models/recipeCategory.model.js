@@ -84,8 +84,13 @@ const recipeCategorySchema = new Schema({
             trim: true,
         },
     },
+    status:{
+        type:Boolean,
+        default:true,
+        enum:[false, true]
+    }
 }, {timestamps: true});
 
-const recipeModel = model("RecipeCategory", recipeCategorySchema);
+const recipeCategoryModel = model("RecipeCategory", recipeCategorySchema);
 
-export default recipeModel;
+export default recipeCategoryModel;
