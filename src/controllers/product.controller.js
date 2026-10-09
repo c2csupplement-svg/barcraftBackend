@@ -5,7 +5,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js
 export const addProduct = async (req, res) => {
     try {
         const { categoryId, name, slug, description, shortDes, flavour, serve, spirits, pairs,
-            nutrition, intgredient, variants, seo, faq, status } = req.body;
+            nutrition, intgredient, recipe, variants, seo, faq, status } = req.body;
 
         const featureImage = req.files?.featureImage?.[0];
         const images = req.files?.image?.[0];
@@ -67,6 +67,7 @@ export const addProduct = async (req, res) => {
         const parseVariants = parseJSON(variants, []);
         const parseSeo = parseJSON(seo, {});
         const parseFaq = parseJSON(faq, []);
+        const parseRecipe = parseJSON(recipe, []);
 
         if (parseNutrition.length === 0 || parseSpirits.length === 0 || parsePairs.length === 0 || parseIngredient.length === 0 ||
             parseVariants.length === 0 || parseFaq.length === 0) {
@@ -106,6 +107,7 @@ export const addProduct = async (req, res) => {
             pairs: parsePairs,
             nutrition: parseNutrition,
             intgredient: parseIngredient,
+            recipe:parseRecipe,
             variants: parseVariants,
             seo: parseSeo,
             faq: parseFaq,
@@ -134,7 +136,7 @@ export const updateProduct = async (req, res) => {
         const { id } = req.params;
 
         const { categoryId, name, slug, description, shortDes, flavour, serve, spirits, pairs,
-            nutrition, intgredient, variants, seo, faq, status } = req.body;
+            nutrition, intgredient, recipe, variants, seo, faq, status } = req.body;
 
         const featureImage = req.files?.featureImage?.[0];
         const image = req.files?.image?.[0];
@@ -176,6 +178,7 @@ export const updateProduct = async (req, res) => {
         const parseVariants = parseJSON(variants, []);
         const parseSeo = parseJSON(seo, {});
         const parseFaq = parseJSON(faq, []);
+        const parseRecipe = parseJSON(recipe,[])
 
         if (categoryId.trim()) {
             productDetails.categoryId = categoryId.trim();
@@ -215,6 +218,9 @@ export const updateProduct = async (req, res) => {
         };
         if (parseFaq.length !== 0) {
             productDetails.faq = parseFaq
+        };
+        if(parseRecipe.length !== 0){
+            productDetails.recipe = parseRecipe;
         }
         if (featureImage) {
             const oldFeaturedImage = productDetails.featureImage;

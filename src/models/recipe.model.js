@@ -5,13 +5,13 @@ const {ObjectId} = Schema;
 const recipeSchema = new Schema({
     categoryId:{
         type:ObjectId,
-        ref:"RecipeCategory"
+        ref:"subcategory"
     },
     name:String,
     slug:String,
     image:String,
     ingredient:[String],
-    makestep:[String],
+    makingstep:[String],
     seo: {
         metaTitle: {
             type: String,

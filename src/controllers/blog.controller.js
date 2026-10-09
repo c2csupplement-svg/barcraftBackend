@@ -394,3 +394,48 @@ export const deleteBlog = async (req, res) => {
         });
     }
 };
+
+export const getBlogByCategory = async (req, res) => {
+    try{
+        const {id} = req.params;
+
+        const page = Math.max(parseInt(req.query.page) || 1,1);
+        const limit = Math.max(parseInt(req.query.limit) || 20,1);
+
+        const skip = (page-1)*limit;
+
+        if(!id){
+            return res.status(400).json({success:false, message: "CategoryId are required."});
+        }
+
+        const [blogs, total] = await Promise.all([
+            BlogModel.find({
+                categoryId: id,
+                status:true
+            })
+            .sort({createdAt:-1})
+            .skip(skip)
+            .limit(limit),
+
+            BlogModel.countDocuments({
+                categoryId: id,
+                status:true
+            })
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            blogs,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+    catch(err){
+        return res.status(500).json({success:false, message: err.message})
+    }
+}

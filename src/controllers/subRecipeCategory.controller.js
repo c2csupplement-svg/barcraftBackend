@@ -1,10 +1,10 @@
-import RecipeCategoryModel from "../models/recipeCategory.model.js";
 import RecipeSubCategoryModel from "../models/recipeSubcategory.model.js";
-import RecipeModel from "../models/recipe.model.js"
+import RecipeModel from "../models/recipe.model.js";
+import RecipeCategoryModel from "../models/recipeCategory.model.js";
 
 export const createRecipeCategory = async (req, res) => {
     try {
-        const { name, slug, shortdes, point, seo, status } = req.body;
+        const { categoryId, name, slug, shortdes, point, seo, status } = req.body;
 
         if (!name.trim() || !slug.trim() || !shortdes.trim()) {
             return res.status(400).json({ success: false, message: "Name, slug and description is required." });
@@ -20,13 +20,19 @@ export const createRecipeCategory = async (req, res) => {
             parseSeo = JSON.parse(seo)
         };
 
-        const duplicateCategory = await RecipeCategoryModel.findOne({ slug: slug });
+        const checkCategory = await RecipeCategoryModel.findById(categoryId);
+
+        if (!checkCategory) {
+            return res.status(400).json({ success: false, message: "Category not found" });
+        }
+
+        const duplicateCategory = await RecipeSubCategoryModel.findOne({ slug: slug });
 
         if (duplicateCategory) {
             return res.status(400).json({ success: false, message: "Duplicate slug" });
         }
 
-        await RecipeCategoryModel.create({
+        await RecipeSubCategoryModel.create({
             name: name.trim(),
             slug: slug.trim(),
             shortdes: shortdes.trim(),
@@ -45,17 +51,27 @@ export const updateRecipeCategory = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const { name, slug, shortdes, point, seo, status } = req.body;
+        const { categoryId, name, slug, shortdes, point, seo, status } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Category Id is required." })
         }
 
-        const categoryDetails = await RecipeCategoryModel.findById(id);
+        const categoryDetails = await RecipeSubCategoryModel.findById(id);
 
         if (!categoryDetails) {
             return res.status(404).json({ success: false, message: "Category not found" });
         };
+
+        if (categoryId.trim()) {
+            const checkCategory = await RecipeCategoryModel.findById(categoryId);
+
+            if (!checkCategory) {
+                return res.status(400).json({ success: false, message: "Category not found" });
+            }
+
+            categoryDetails.categoryId = categoryId.trim();
+        }
 
         if (name.trim()) {
             categoryDetails.name = name.trim();
@@ -93,7 +109,7 @@ export const updateStatusRecipeCategory = async (req, res) => {
             return res.status(400).json({ success: false, message: "CategoryId is required" });
         }
 
-        const categoryDetails = await RecipeCategoryModel.findById(id);
+        const categoryDetails = await RecipeSubCategoryModel.findById(id);
 
         if (!categoryDetails) {
             return res.status(404).json({ success: false, message: "Category not found" });
@@ -118,13 +134,13 @@ export const deleteRecipeCategory = async (req, res) => {
             return res.status(400).json({ success: false, message: "CategoryId is required." });
         }
 
-        const categoryBelongStatus = await RecipeSubCategoryModel.findOne({ categoryId: id });
+        const categoryBelongStatus = await RecipeModel.findOne({ categoryId: id });
 
         if (categoryBelongStatus) {
             return res.status(400).json({ success: false, message: "Category is Belong with some recipe" });
         }
 
-        const deleteCategoryStatus = await RecipeCategoryModel.findByIdAndDelete(id);
+        const deleteCategoryStatus = await RecipeSubCategoryModel.findByIdAndDelete(id);
 
         if (!deleteCategoryStatus) {
             return res.status(404).json({ success: false, message: "Category not found." });
@@ -141,76 +157,16 @@ export const getRecipeCategoryByAdmin = async (req, res) => {
     try {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.max(parseInt(req.query.limit) || 20, 1);
-        const skip = (page - 1) * limit;
-
-        const [category, countResult] = await Promise.all([
-            RecipeCategoryModel.aggregate([
-                {
-                    $sort: { createdAt: -1 }
-                },
-                {
-                    $skip: skip
-                },
-                {
-                    $limit: limit
-                },
-                {
-                    $lookup: {
-                        from: RecipeSubCategoryModel.collection.name,
-                        localField: "_id",
-                        foreignField: "categoryId",
-                        as: "subcategories"
-                    }
-                },
-                {
-                    $addFields: {
-                        subcategoryCount: {
-                            $size: "$subcategories"
-                        }
-                    }
-                }
-            ]),
-            RecipeCategoryModel.aggregate([
-                {
-                    $count: "total"
-                }
-            ])
-        ]);
-
-        const total = countResult[0]?.total || 0;
-
-        return res.status(200).json({
-            success: true,
-            category,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
-        });
-    } catch (err) {
-        return res.status(500).json({
-            success: false,
-            message: err.message
-        });
-    }
-};
-
-export const getRecipeCategory = async (req, res) => {
-    try {
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
         const [category, total] = await Promise.all([
-            RecipeCategoryModel.find({ status: true })
+            RecipeSubCategoryModel.find()
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
 
-            RecipeCategoryModel.countDocuments({ status: true })
+            RecipeSubCategoryModel.countDocuments()
         ]);
 
         return res.status(200).json({
@@ -230,41 +186,26 @@ export const getRecipeCategory = async (req, res) => {
     }
 }
 
-export const getRecipeByCategory = async (req, res) => {
+export const getRecipeCategory = async (req, res) => {
     try {
-        const { id } = req.params;
-
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const skip = (page - 1) * limit;
 
-        if (!id.trim()) {
-            return res.status(400).json({ success: false, message: "CategoryId are required." });
-        }
-
-        const subcategory = await RecipeSubCategoryModel.find({ categoryId: id });
-
-        if (subcategory.length === 0) {
-            return res.status(404).json({ success: false, message: "No Recipe Found" });
-        };
-
-        const subCategoryIds = subcategory.map(categoryId => categoryId._id)
-
-        const [recipes, total] = await Promise.all([
-            RecipeModel.find({ categoryId: { $in: subCategoryIds } })
-                .populate("categoryId")
+        const [category, total] = await Promise.all([
+            RecipeSubCategoryModel.find({ status: true })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
 
-            RecipeModel.countDocuments({ categoryId: { $in: subCategoryIds } })
+            RecipeSubCategoryModel.countDocuments({ status: true })
         ]);
 
         return res.status(200).json({
             success: true,
             query,
-            recipes,
+            category,
             pagination: {
                 page,
                 limit,
@@ -274,6 +215,6 @@ export const getRecipeByCategory = async (req, res) => {
         });
     }
     catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: err.message })
     }
 }

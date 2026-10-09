@@ -148,6 +148,30 @@ export const updateProductCategory = async (req, res) => {
     }
 }
 
+export const updateProductCategoryStatus = async (req, res) => {
+    try{
+        const {id} = req.params;
+
+        if(!id.trim()){
+            return res.status(400).json({success:false,message: "CategoryId are required"});
+        }
+
+        const categoryDetails = await ProductCategoryModel.findById(id);
+
+        if(!categoryDetails){
+            return res.status(404).json({success:false, message:"Category not  found"});
+        }
+
+        categoryDetails.status = !categoryDetails.status;
+
+        return res.status(200).json({success:true, message: "Status update successfully"});
+
+    }
+    catch(err){
+        return res.status(500).json({success:false, message: err.message});
+    }
+}
+
 export const deleteProductCategory = async(req, res) => {
     try{
         const {id} = req.params;
