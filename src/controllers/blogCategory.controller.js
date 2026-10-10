@@ -15,7 +15,7 @@ export const createCategory = async (req, res) => {
         }
 
         const checkDuplicated = await BlogCategoryModel.findOne({
-            slug: slug.trim()
+            slug: slug?.trim()
         });
 
         if (checkDuplicated) {
@@ -44,13 +44,13 @@ export const createCategory = async (req, res) => {
         if (image) {
             imageResult = await uploadToCloudinary(
                 image.buffer,
-                name.trim()
+                name?.trim()
             );
         }
 
         const categoryDetail = await BlogCategoryModel.create({
-            name: name.trim(),
-            slug: slug.trim(),
+            name: name?.trim(),
+            slug: slug?.trim(),
             image: imageResult?.secure_url || null,
             seo: parsedSeo,
             status:status
@@ -96,7 +96,7 @@ export const updateCategory = async (req, res) => {
         }
 
         const duplicateCategory = await BlogCategoryModel.findOne({
-            slug: slug.trim(),
+            slug: slug?.trim(),
             _id: { $ne: id }
         });
 
@@ -137,14 +137,14 @@ export const updateCategory = async (req, res) => {
 
             const imageResult = await uploadToCloudinary(
                 image.buffer,
-                name.trim()
+                name?.trim()
             );
 
             category.image = imageResult.secure_url;
         }
 
-        category.name = name.trim();
-        category.slug = slug.trim();
+        category.name = name?.trim();
+        category.slug = slug?.trim();
         category.seo = parsedSeo;
         category.status = status;
 

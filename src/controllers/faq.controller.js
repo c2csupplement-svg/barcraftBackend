@@ -12,8 +12,8 @@ export const addFaq = async (req, res) => {
         }
 
         const faq = await FaqModel.create({
-            question: question.trim(),
-            answer: answer.trim(),
+            question: question?.trim(),
+            answer: answer?.trim(),
             status: status          
         });
 
@@ -110,25 +110,25 @@ export const updateFaq = async (req, res) => {
         }
 
         if (question !== undefined) {
-            if (!question.trim()) {
+            if (!question?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Question is required"
                 });
             }
 
-            faq.question = question.trim();
+            faq.question = question?.trim();
         }
 
         if (answer !== undefined) {
-            if (!answer.trim()) {
+            if (!answer?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Answer is required"
                 });
             }
 
-            faq.answer = answer.trim();
+            faq.answer = answer?.trim();
         }
 
         if (status !== undefined) {

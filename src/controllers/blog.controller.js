@@ -15,7 +15,7 @@ export const createBlog = async (req, res) => {
         }
 
         const checkDuplicate = await BlogModel.findOne({
-            slug: slug.trim()
+            slug: slug?.trim()
         });
 
         if (checkDuplicate) {
@@ -32,7 +32,7 @@ export const createBlog = async (req, res) => {
         if (image) {
             imageResult = await uploadToCloudinary(
                 image.buffer,
-                title.trim()
+                title?.trim()
             );
         }
 
@@ -51,13 +51,13 @@ export const createBlog = async (req, res) => {
         }
 
         const blogDetail = await BlogModel.create({
-            categoryId: categoryId.trim(),
-            slug: slug.trim(),
-            title: title.trim(),
-            description: description.trim(),
+            categoryId: categoryId?.trim(),
+            slug: slug?.trim(),
+            title: title?.trim(),
+            description: description?.trim(),
             image: imageResult?.secure_url || "",
-            content: content.trim(),
-            author: author.trim(),
+            content: content?.trim(),
+            author: author?.trim(),
             seo: parsedSeo,
             status: status
         });
@@ -264,7 +264,7 @@ export const updateBlog = async (req, res) => {
 
         if (slug?.trim()) {
             const duplicateSlug = await BlogModel.findOne({
-                slug: slug.trim(),
+                slug: slug?.trim(),
                 _id: { $ne: id }
             });
 
@@ -275,27 +275,27 @@ export const updateBlog = async (req, res) => {
                 });
             }
 
-            blog.slug = slug.trim();
+            blog.slug = slug?.trim();
         }
 
         if (categoryId?.trim()) {
-            blog.categoryId = categoryId.trim();
+            blog.categoryId = categoryId?.trim();
         }
 
         if (title?.trim()) {
-            blog.title = title.trim();
+            blog.title = title?.trim();
         }
 
         if (description?.trim()) {
-            blog.description = description.trim();
+            blog.description = description?.trim();
         }
 
         if (content?.trim()) {
-            blog.content = content.trim();
+            blog.content = content?.trim();
         }
 
         if (author?.trim()) {
-            blog.author = author.trim();
+            blog.author = author?.trim();
         }
 
         if (status) {
@@ -394,3 +394,48 @@ export const deleteBlog = async (req, res) => {
         });
     }
 };
+
+export const getBlogByCategory = async (req, res) => {
+    try{
+        const {id} = req.params;
+
+        const page = Math.max(parseInt(req.query.page) || 1,1);
+        const limit = Math.max(parseInt(req.query.limit) || 20,1);
+
+        const skip = (page-1)*limit;
+
+        if(!id){
+            return res.status(400).json({success:false, message: "CategoryId are required."});
+        }
+
+        const [blogs, total] = await Promise.all([
+            BlogModel.find({
+                categoryId: id,
+                status:true
+            })
+            .sort({createdAt:-1})
+            .skip(skip)
+            .limit(limit),
+
+            BlogModel.countDocuments({
+                categoryId: id,
+                status:true
+            })
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            query,
+            blogs,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    }
+    catch(err){
+        return res.status(500).json({success:false, message: err.message})
+    }
+}

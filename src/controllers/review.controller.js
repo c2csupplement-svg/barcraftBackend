@@ -35,8 +35,8 @@ export const addReview = async (req, res) => {
             {
                 $push: {
                     review: {
-                        name: name.trim(),
-                        des: des.trim(),
+                        name: name?.trim(),
+                        des: des?.trim(),
                         rating: String(rating),
                         image: imageResult
                     }

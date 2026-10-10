@@ -9,7 +9,7 @@ export const addProductCategory = async (req, res) => {
         const mobile = req.files?.mobileImg?.[0];
         const desktop = req.files?.desktopImg?.[0];
 
-        if (!name.trim() || !shortdes.trim() || !slug.trim()) {
+        if (!name?.trim() || !shortdes?.trim() || !slug?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Name and Short Description both required."
@@ -32,18 +32,18 @@ export const addProductCategory = async (req, res) => {
 
         const mobileResult = await uploadToCloudinary(
             mobile.buffer,
-            `${title.trim()}-mobile`
+            `${title?.trim()}-mobile`
         );
 
         const desktopResult = await uploadToCloudinary(
             desktop.buffer,
-            `${title.trim()}-desktop`
+            `${title?.trim()}-desktop`
         );
 
         await ProductCategoryModel({
-            name: name.trim(),
-            slug:slug.trim(),
-            shortdes: shortdes.trim(),
+            name: name?.trim(),
+            slug:slug?.trim(),
+            shortdes: shortdes?.trim(),
             desktopImage: desktopResult.secure_url,
             mobileImage: mobileResult.secure_url,
             status:status
@@ -123,20 +123,20 @@ export const updateProductCategory = async (req, res) => {
         }
 
 
-        if(name.trim()){
-            categoryDetails.name = name.trim();
+        if(name?.trim()){
+            categoryDetails.name = name?.trim();
         }
 
-        if(slug.trim()){
-            categoryDetails.slug = slug.trim();
+        if(slug?.trim()){
+            categoryDetails.slug = slug?.trim();
         }
 
-        if(shortdes.trim()){
-            categoryDetails.shortdes = shortdes.trim();
+        if(shortdes?.trim()){
+            categoryDetails.shortdes = shortdes?.trim();
         }
 
-        if(status.trim()){
-            categoryDetails.status = status.trim()
+        if(status?.trim()){
+            categoryDetails.status = status?.trim()
         }
 
         await categoryDetails.save();
@@ -148,11 +148,35 @@ export const updateProductCategory = async (req, res) => {
     }
 }
 
+export const updateProductCategoryStatus = async (req, res) => {
+    try{
+        const {id} = req.params;
+
+        if(!id?.trim()){
+            return res.status(400).json({success:false,message: "CategoryId are required"});
+        }
+
+        const categoryDetails = await ProductCategoryModel.findById(id);
+
+        if(!categoryDetails){
+            return res.status(404).json({success:false, message:"Category not  found"});
+        }
+
+        categoryDetails.status = !categoryDetails.status;
+
+        return res.status(200).json({success:true, message: "Status update successfully"});
+
+    }
+    catch(err){
+        return res.status(500).json({success:false, message: err.message});
+    }
+}
+
 export const deleteProductCategory = async(req, res) => {
     try{
         const {id} = req.params;
 
-       const products = await ProductModel.findOne({categoryId:id.trim()});
+       const products = await ProductModel.findOne({categoryId:id?.trim()});
 
        if(products){
         return res.status(400).json({success:false, message:"This category belong to someone products."});

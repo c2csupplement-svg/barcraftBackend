@@ -1,53 +1,15 @@
-import { Schema, model } from "mongoose";
+import {Schema, model} from "mongoose";
 
-const { ObjectId } = Schema
+const {ObjectId} = Schema;
 
-const productSchema = new Schema({
-    categoryId: {
-        type: ObjectId,
-        ref: "Product category"
-    },
-    name: {
-        type: String
-    },
-    slug: {
-        type: String,
-        unique: true
-    },
-    description: {
-        type: String,
-    },
-    shortDes: {
-        type: String
-    },
-    featureImage: {
-        type: String
-    },
-    image: String,
-    bottleImage:String,
-    flavour: {
-        name: String,
-        des: String
-    },
-    serve: String,
-    spirits: [String],
-    pairs: [String],
-    nutrition: [{
-        name: String,
-        value: String
-    }],
-    intgredient: [{
-        name: String,
-        value: String
-    }],
-    variants: [{
-        name: String,
-        image: String,
-    }],
-    recipe:[{
+const subCategorySchema = new Schema({
+    categoryId:{
         type:ObjectId,
-        ref: "Recipe"
-    }],
+        ref:"RecipeCategory"
+    },
+    name:String,
+    slug:String,
+    shortdes: String,
     seo: {
         metaTitle: {
             type: String,
@@ -127,31 +89,13 @@ const productSchema = new Schema({
             trim: true,
         },
     },
-    faq: [
-        {
-            question: {
-                type: String
-            },
-            answer: {
-                type: String
-            }
-        }
-    ],
-    review: [{
-        name: String,
-        rating: Number,
-        des: String,
-        image: [String]
-    }],
-    status: {
-        type: Boolean,
-        default: true,
-        enum: [false, true]
+    status:{
+        type:Boolean,
+        default:true,
+        enum:[true, false]
     }
-},
-    { timestamps: true }
-);
+}, {timestamps: true});
 
-const productModel = model("Products", productSchema);
+const subCategoryModel = model("subcategory", subCategorySchema);
 
-export default productModel
+export default subCategoryModel;
