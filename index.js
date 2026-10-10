@@ -30,7 +30,7 @@ app.use(
     'http://localhost:3000',
     'https://barcraftmixer.com',
     'https://www.barcraftmixer.com',
-    'https://<admin-domain>',        // admin jis domain par khulta hai
+    'https://<admin-domain>',        
   ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
