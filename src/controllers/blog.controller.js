@@ -15,7 +15,7 @@ export const createBlog = async (req, res) => {
         }
 
         const checkDuplicate = await BlogModel.findOne({
-            slug: slug.trim()
+            slug: slug?.trim()
         });
 
         if (checkDuplicate) {
@@ -32,7 +32,7 @@ export const createBlog = async (req, res) => {
         if (image) {
             imageResult = await uploadToCloudinary(
                 image.buffer,
-                title.trim()
+                title?.trim()
             );
         }
 
@@ -51,13 +51,13 @@ export const createBlog = async (req, res) => {
         }
 
         const blogDetail = await BlogModel.create({
-            categoryId: categoryId.trim(),
-            slug: slug.trim(),
-            title: title.trim(),
-            description: description.trim(),
+            categoryId: categoryId?.trim(),
+            slug: slug?.trim(),
+            title: title?.trim(),
+            description: description?.trim(),
             image: imageResult?.secure_url || "",
-            content: content.trim(),
-            author: author.trim(),
+            content: content?.trim(),
+            author: author?.trim(),
             seo: parsedSeo,
             status: status
         });
@@ -264,7 +264,7 @@ export const updateBlog = async (req, res) => {
 
         if (slug?.trim()) {
             const duplicateSlug = await BlogModel.findOne({
-                slug: slug.trim(),
+                slug: slug?.trim(),
                 _id: { $ne: id }
             });
 
@@ -275,27 +275,27 @@ export const updateBlog = async (req, res) => {
                 });
             }
 
-            blog.slug = slug.trim();
+            blog.slug = slug?.trim();
         }
 
         if (categoryId?.trim()) {
-            blog.categoryId = categoryId.trim();
+            blog.categoryId = categoryId?.trim();
         }
 
         if (title?.trim()) {
-            blog.title = title.trim();
+            blog.title = title?.trim();
         }
 
         if (description?.trim()) {
-            blog.description = description.trim();
+            blog.description = description?.trim();
         }
 
         if (content?.trim()) {
-            blog.content = content.trim();
+            blog.content = content?.trim();
         }
 
         if (author?.trim()) {
-            blog.author = author.trim();
+            blog.author = author?.trim();
         }
 
         if (status) {

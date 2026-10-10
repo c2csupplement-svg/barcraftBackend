@@ -72,7 +72,7 @@ export const createRecipe = async (req, res) => {
         }
 
         const category = await RecipeSubCategoryModel.findById(
-            categoryId.trim()
+            categoryId?.trim()
         );
 
         if (!category) {
@@ -83,7 +83,7 @@ export const createRecipe = async (req, res) => {
         }
 
         const duplicateSlug = await RecipeModel.findOne({
-            slug: slug.trim()
+            slug: slug?.trim()
         });
 
         if (duplicateSlug) {
@@ -95,14 +95,14 @@ export const createRecipe = async (req, res) => {
 
         uploadedImage = await uploadToCloudinary(
             image.buffer,
-            `${name.trim()}-image`
+            `${name?.trim()}-image`
         );
 
         const recipe = await RecipeModel.create({
-            categoryId: categoryId.trim(),
-            name: name.trim(),
-            slug: slug.trim(),
-            image: uploadedImage,
+            categoryId: categoryId?.trim(),
+            name: name?.trim(),
+            slug: slug?.trim(),
+            image: uploadedImage.secure_url,
             ingredient: ingredients,
             makingstep: makingSteps,
             seo: seoData,
@@ -248,7 +248,7 @@ export const getRecipeBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
 
-        if (!slug.trim()) {
+        if (!slug?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Recipe slug is required."
@@ -305,7 +305,7 @@ export const updateRecipe = async (req, res) => {
         const updateData = {};
 
         if (categoryId !== undefined) {
-            if (!categoryId.trim()) {
+            if (!categoryId?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Category ID cannot be empty."
@@ -313,7 +313,7 @@ export const updateRecipe = async (req, res) => {
             }
 
             const category = await RecipeSubCategoryModel.findById(
-                categoryId.trim()
+                categoryId?.trim()
             );
 
             if (!category) {
@@ -323,22 +323,22 @@ export const updateRecipe = async (req, res) => {
                 });
             }
 
-            updateData.categoryId = categoryId.trim();
+            updateData.categoryId = categoryId?.trim();
         }
 
         if (name !== undefined) {
-            if (!name.trim()) {
+            if (!name?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Name cannot be empty."
                 });
             }
 
-            updateData.name = name.trim();
+            updateData.name = name?.trim();
         }
 
         if (slug !== undefined) {
-            if (!slug.trim()) {
+            if (!slug?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Slug cannot be empty."
@@ -346,7 +346,7 @@ export const updateRecipe = async (req, res) => {
             }
 
             const duplicateSlug = await RecipeModel.findOne({
-                slug: slug.trim(),
+                slug: slug?.trim(),
                 _id: { $ne: id }
             });
 
@@ -357,7 +357,7 @@ export const updateRecipe = async (req, res) => {
                 });
             }
 
-            updateData.slug = slug.trim();
+            updateData.slug = slug?.trim();
         }
 
         if (ingredient !== undefined) {
@@ -413,7 +413,7 @@ export const updateRecipe = async (req, res) => {
             uploadedImage = await uploadToCloudinary(
                 image.buffer,
                 `${updateData.name || recipe.name}-image`
-            );
+            )?.secure_url;
 
             updateData.image = uploadedImage;
         }
@@ -426,7 +426,7 @@ export const updateRecipe = async (req, res) => {
 
         if (image && recipe.image) {
             try {
-                const oldPublicId = getCloudinaryPublicId(recipe.image);
+                const oldPublicId = recipe.image;
 
                 if (oldPublicId) {
                     await deleteFromCloudinary(oldPublicId);
@@ -603,7 +603,7 @@ export const updateStatus = async (req, res) => {
     try{
         const {id} = req.params;
 
-        if(!id.trim()){
+        if(!id?.trim()){
             return res.status(400).json({success:false, message: "RecipeId is required."});
         }
 

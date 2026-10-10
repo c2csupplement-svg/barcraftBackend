@@ -14,11 +14,11 @@ export const addContact = async (req, res) => {
         }
 
         const contact = await ContactModel.create({
-            name: name.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            subject: subject.trim(),
-            message: message.trim()
+            name: name?.trim(),
+            email: email?.trim(),
+            phone: phone?.trim(),
+            subject: subject?.trim(),
+            message: message?.trim()
         });
 
         return res.status(201).json({

@@ -33,7 +33,7 @@ export const addProduct = async (req, res) => {
         }
 
         const duplicateProduct = await ProductModel.findOne({
-            slug: slug.trim()
+            slug: slug?.trim()
         });
 
         if (duplicateProduct) {
@@ -79,26 +79,26 @@ export const addProduct = async (req, res) => {
 
         const imageResult = await uploadToCloudinary(
             images.buffer,
-            `${name.trim()}-image`
+            `${name?.trim()}-image`
         )
 
         const featureImageResult = await uploadToCloudinary(
             featureImage.buffer,
-            `${name.trim()}-feature`
+            `${name?.trim()}-feature`
         );
 
         const bottleImageResult = await uploadToCloudinary(
             bottleImage.buffer,
-            `${name.trim()}-bottle`
+            `${name?.trim()}-bottle`
         )
 
         const product = await ProductModel.create({
-            categoryId: categoryId.trim(),
-            name: name.trim(),
-            slug: slug.trim(),
-            description: description.trim(),
-            shortDes: shortDes.trim(),
-            serve: serve.trim(),
+            categoryId: categoryId?.trim(),
+            name: name?.trim(),
+            slug: slug?.trim(),
+            description: description?.trim(),
+            shortDes: shortDes?.trim(),
+            serve: serve?.trim(),
             image: imageResult.secure_url,
             featureImage: featureImageResult.secure_url,
             bottleImage: bottleImageResult.secure_url,
@@ -142,7 +142,7 @@ export const updateProduct = async (req, res) => {
         const image = req.files?.image?.[0];
         const bottleImage = req.files?.[0];
 
-        if (!id.trim()) {
+        if (!id?.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
         }
 
@@ -180,23 +180,23 @@ export const updateProduct = async (req, res) => {
         const parseFaq = parseJSON(faq, []);
         const parseRecipe = parseJSON(recipe,[])
 
-        if (categoryId.trim()) {
-            productDetails.categoryId = categoryId.trim();
+        if (categoryId?.trim()) {
+            productDetails.categoryId = categoryId?.trim();
         };
-        if (name.trim()) {
-            productDetails.name = name.trim();
+        if (name?.trim()) {
+            productDetails.name = name?.trim();
         };
-        if (slug.trim()) {
-            productDetails.slug = slug.trim();
+        if (slug?.trim()) {
+            productDetails.slug = slug?.trim();
         };
-        if (description.trim()) {
-            productDetails.description = description.trim();
+        if (description?.trim()) {
+            productDetails.description = description?.trim();
         };
-        if (shortDes.trim()) {
-            productDetails.shortDes = shortDes.trim();
+        if (shortDes?.trim()) {
+            productDetails.shortDes = shortDes?.trim();
         };
-        if (serve.trim()) {
-            productDetails.serve = serve.trim();
+        if (serve?.trim()) {
+            productDetails.serve = serve?.trim();
         }
         if (flavour && Object.keys(flavour).length > 0) {
             productDetails.flavour = parseFlavour
@@ -227,7 +227,7 @@ export const updateProduct = async (req, res) => {
 
             productDetails.featureImage = await uploadToCloudinary(
                 featureImage.buffer,
-                `${name.trim()}-feature`
+                `${name?.trim()}-feature`
             );
 
             if(oldFeaturedImage){
@@ -239,7 +239,7 @@ export const updateProduct = async (req, res) => {
 
             productDetails.image = await uploadToCloudinary(
                 image.buffer,
-                `${name.trim()}-image`
+                `${name?.trim()}-image`
             );
 
             if(oldImage){
@@ -251,7 +251,7 @@ export const updateProduct = async (req, res) => {
 
             productDetails.bottleImage = await uploadToCloudinary(
                 bottleImage.buffer,
-                `${name.trim()}-bottle`
+                `${name?.trim()}-bottle`
             );
 
             if(oldImage){
@@ -275,7 +275,7 @@ export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id.trim()) {
+        if (!id?.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
         }
 
@@ -297,7 +297,7 @@ export const updateProductStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        if (!id.trim()) {
+        if (!id?.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
         }
 
@@ -384,7 +384,7 @@ export const getProuctBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
 
-        if (!slug.trim()) {
+        if (!slug?.trim()) {
             return res.status(400).json({ success: false, message: "Slug is required" });
         }
 
@@ -410,7 +410,7 @@ export const getProductbyCategoryId = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        if (!id.trim()) {
+        if (!id?.trim()) {
             return res.status(400).json({ success: false, message: "ProductId is required" });
         }
 
@@ -449,7 +449,7 @@ export const searchProduct = async (req, res) => {
 
         const { q } = req.query;
 
-        if (!q || !q.trim()) {
+        if (!q || !q?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Search query is required."
@@ -458,7 +458,7 @@ export const searchProduct = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        const search = q.trim();
+        const search = q?.trim();
 
         const searchRegex = new RegExp(query, "i");
 
@@ -515,7 +515,7 @@ export const getProductByCategorySlug = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        if (!slug.trim()) {
+        if (!slug?.trim()) {
             return res.status(400).json({ success: false, message: "Slug is required." });
         };
 

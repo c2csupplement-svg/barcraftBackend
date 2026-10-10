@@ -13,7 +13,7 @@ export const addInstagramPost = async (req, res) => {
         }
 
         const post = await InstagramModel.create({
-            link: link.trim(),
+            link: link?.trim(),
             status: status
         });
 
@@ -110,14 +110,14 @@ export const updateInstagramPost = async (req, res) => {
         }
 
         if (link !== undefined) {
-            if (!link.trim()) {
+            if (!link?.trim()) {
                 return res.status(400).json({
                     success: false,
                     message: "Instagram post link is required"
                 });
             }
 
-            post.link = link.trim();
+            post.link = link?.trim();
         }
 
         if (status !== undefined) {

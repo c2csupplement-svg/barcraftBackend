@@ -9,6 +9,7 @@ const subCategorySchema = new Schema({
     },
     name:String,
     slug:String,
+    shortdes: String,
     seo: {
         metaTitle: {
             type: String,

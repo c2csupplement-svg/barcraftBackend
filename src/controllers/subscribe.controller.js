@@ -23,7 +23,7 @@ export const updateStatus = async(req,res) => {
     try{
         const {id} = req.params;
 
-        if(!id.trim()){
+        if(!id?.trim()){
             return res.status(400).json({success:false, message:"User Id is required"})
         }
 

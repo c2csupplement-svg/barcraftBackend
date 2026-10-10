@@ -25,19 +25,19 @@ export const createBanner = async (req, res) => {
 
         const mobileResult = await uploadToCloudinary(
             mobile.buffer,
-            `${title.trim()}-mobile`
+            `${title?.trim()}-mobile`
         );
 
         const desktopResult = await uploadToCloudinary(
             desktop.buffer,
-            `${title.trim()}-desktop`
+            `${title?.trim()}-desktop`
         );
 
         const banner = await BannerModel.create({
-            title: title.trim(),
-            shortdes: shortdes.trim(),
-            tag: tag.trim(),
-            link: link.trim(),
+            title: title?.trim(),
+            shortdes: shortdes?.trim(),
+            tag: tag?.trim(),
+            link: link?.trim(),
             desktopImg: desktopResult.secure_url,
             mobileImg: mobileResult.secure_url,
             status: status
@@ -137,19 +137,19 @@ export const updateBanner = async (req, res) => {
         }
 
         if (title?.trim()) {
-            banner.title = title.trim();
+            banner.title = title?.trim();
         }
 
         if (shortdes?.trim()) {
-            banner.shortdes = shortdes.trim();
+            banner.shortdes = shortdes?.trim();
         }
 
         if (tag?.trim()) {
-            banner.tag = tag.trim();
+            banner.tag = tag?.trim();
         }
 
         if (link?.trim()) {
-            banner.link = link.trim();
+            banner.link = link?.trim();
         }
 
         if (status !== undefined) {

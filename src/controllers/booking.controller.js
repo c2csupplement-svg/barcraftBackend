@@ -4,7 +4,7 @@ export const bookingRegister = async (req, res) => {
     try{
         const {name, phone, venue, address, guestNumber, date, email, flavour, addon, status} = req.body;
 
-        if(!name.trim() || !phone.trim() || !venue.trim() || !address.trim() || !guestNumber.trim() || !date.trim() || !email.trim()){
+        if(!name?.trim() || !phone?.trim() || !venue?.trim() || !address?.trim() || !guestNumber?.trim() || !date?.trim() || !email?.trim()){
             return res.status(400).json({success:false, message:"Send Required Informations."});
         }
 
@@ -13,12 +13,12 @@ export const bookingRegister = async (req, res) => {
         };
 
         await BookingModel.create({
-            name:name.trim(),
-            phone:phone.trim(),
-            venue: venue.trim(),
-            address: address.trim(),
-            guestNumber: guestNumber.trim(),
-            date:date.trim(),
+            name:name?.trim(),
+            phone:phone?.trim(),
+            venue: venue?.trim(),
+            address: address?.trim(),
+            guestNumber: guestNumber?.trim(),
+            date:date?.trim(),
             flavour:flavour,
             addon:addon,
             status:status
@@ -117,14 +117,14 @@ export const searchBooking = async (req, res) => {
     try {
         const { q } = req.query;
 
-        if (!q || !q.trim()) {
+        if (!q || !q?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Search query is required."
             });
         }
 
-        const search = q.trim();
+        const search = q?.trim();
 
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = Math.max(parseInt(req.query.limit) || 10, 1);

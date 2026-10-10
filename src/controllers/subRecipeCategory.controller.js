@@ -6,8 +6,8 @@ export const createRecipeCategory = async (req, res) => {
     try {
         const { categoryId, name, slug, shortdes, point, seo, status } = req.body;
 
-        if (!name.trim() || !slug.trim() || !shortdes.trim()) {
-            return res.status(400).json({ success: false, message: "Name, slug and description is required." });
+        if (!categoryId?.trim() ||!name?.trim() || !slug?.trim() || !shortdes?.trim()) {
+            return res.status(400).json({ success: false, message: "CategoryId, Name, slug and description is required." });
         };
 
         if (point?.length === 0) {
@@ -33,9 +33,10 @@ export const createRecipeCategory = async (req, res) => {
         }
 
         await RecipeSubCategoryModel.create({
-            name: name.trim(),
-            slug: slug.trim(),
-            shortdes: shortdes.trim(),
+            categoryId:categoryId?.trim(),
+            name: name?.trim(),
+            slug: slug?.trim(),
+            shortdes: shortdes?.trim(),
             seo: parseSeo,
             status: status
         })
@@ -63,33 +64,37 @@ export const updateRecipeCategory = async (req, res) => {
             return res.status(404).json({ success: false, message: "Category not found" });
         };
 
-        if (categoryId.trim()) {
+        if (categoryId?.trim()) {
             const checkCategory = await RecipeCategoryModel.findById(categoryId);
 
             if (!checkCategory) {
                 return res.status(400).json({ success: false, message: "Category not found" });
             }
 
-            categoryDetails.categoryId = categoryId.trim();
+            categoryDetails.categoryId = categoryId?.trim();
         }
 
-        if (name.trim()) {
-            categoryDetails.name = name.trim();
+        if (name?.trim()) {
+            categoryDetails.name = name?.trim();
         };
-        if (slug.trim()) {
-            categoryDetails.slug = slug.trim();
+        if (slug?.trim()) {
+            categoryDetails.slug = slug?.trim();
         };
-        if (shortdes.trim()) {
-            categoryDetails.shortdes = shortdes.trim();
+        if (shortdes?.trim()) {
+            categoryDetails.shortdes = shortdes?.trim();
         };
-        if (point.length > 0) {
+       if (Array.isArray(point)) {
             categoryDetails.point = point
+                .map((item) => String(item ?? "").trim())
+                .filter(Boolean);
         }
-        if (Object.keys(seo).length > 0) {
-            categoryDetails.seo = seo
-        };
-        if (status.trim()) {
-            categoryDetails.status = status.trim()
+
+        if ( seo &&typeof seo === "object" && !Array.isArray(seo) && Object.keys(seo).length > 0 ) {
+            categoryDetails.seo = seo;
+        }
+
+        if (typeof status === "boolean") {
+            categoryDetails.status = status;
         }
 
         await categoryDetails.save();
@@ -105,7 +110,7 @@ export const updateStatusRecipeCategory = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id.trim()) {
+        if (!id?.trim()) {
             return res.status(400).json({ success: false, message: "CategoryId is required" });
         }
 
@@ -171,7 +176,6 @@ export const getRecipeCategoryByAdmin = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            query,
             category,
             pagination: {
                 page,
