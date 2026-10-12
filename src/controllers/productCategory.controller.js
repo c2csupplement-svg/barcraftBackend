@@ -1,6 +1,7 @@
 import ProductCategoryModel from "../models/productCategory.model.js";
 import ProductModel from "../models/product.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
+import mongoose from "mongoose";
 
 export const addProductCategory = async (req, res) => {
     try {
@@ -24,29 +25,29 @@ export const addProductCategory = async (req, res) => {
         };
 
 
-         const productCategory = await ProductCategoryModel.findOne({slug:slug});
+        const productCategory = await ProductCategoryModel.findOne({ slug: slug });
 
-         if(productCategory){
-            return res.status(400).json({success:false, message: "Duplicate Slug"});
-         }
+        if (productCategory) {
+            return res.status(400).json({ success: false, message: "Duplicate Slug" });
+        }
 
         const mobileResult = await uploadToCloudinary(
             mobile.buffer,
-            `${title?.trim()}-mobile`
+            `${name?.trim()}-mobile`
         );
 
         const desktopResult = await uploadToCloudinary(
             desktop.buffer,
-            `${title?.trim()}-desktop`
+            `${name?.trim()}-desktop`
         );
 
-        await ProductCategoryModel({
+        await ProductCategoryModel.create({
             name: name?.trim(),
-            slug:slug?.trim(),
+            slug: slug?.trim(),
             shortdes: shortdes?.trim(),
             desktopImage: desktopResult.secure_url,
             mobileImage: mobileResult.secure_url,
-            status:status
+            status: status
         });
 
         return res.status(200).json({ success: true, message: "Product category successfully" });
@@ -59,26 +60,26 @@ export const addProductCategory = async (req, res) => {
 export const updateProductCategory = async (req, res) => {
     try {
 
-        const {id} = req.params;
+        const { id } = req.params;
 
-        const { name, shortdes, slug, status} = req.body;
+        const { name, shortdes, slug, status } = req.body;
 
         const mobile = req.files?.mobileImg?.[0];
         const desktop = req.files?.desktopImg?.[0];
 
         const categoryDetails = await ProductCategoryModel.findById(id);
 
-        if(!categoryDetails){
+        if (!categoryDetails) {
             return res.status(404).json({
-                success:false, 
-                message:"Product Category is not found"
+                success: false,
+                message: "Product Category is not found"
             })
         }
 
         let desktopResult = null;
         let mobileResult = null;
 
-        if(mobile){
+        if (mobile) {
             const oldMobileImage = categoryDetails.mobileImage;
 
             mobileResult = await uploadToCloudinary(
@@ -100,7 +101,7 @@ export const updateProductCategory = async (req, res) => {
             }
         }
 
-        if(desktop){
+        if (desktop) {
             const oldDesktopImage = categoryDetails.desktopImage;
 
             desktopResult = await uploadToCloudinary(
@@ -123,25 +124,25 @@ export const updateProductCategory = async (req, res) => {
         }
 
 
-        if(name?.trim()){
+        if (name?.trim()) {
             categoryDetails.name = name?.trim();
         }
 
-        if(slug?.trim()){
+        if (slug?.trim()) {
             categoryDetails.slug = slug?.trim();
         }
 
-        if(shortdes?.trim()){
+        if (shortdes?.trim()) {
             categoryDetails.shortdes = shortdes?.trim();
         }
 
-        if(status?.trim()){
-            categoryDetails.status = status?.trim()
+        if (status) {
+            categoryDetails.status = status
         }
 
         await categoryDetails.save();
 
-        return res.status(200).json({success:true, message: "Product Category Update Successfully"});
+        return res.status(200).json({ success: true, message: "Product Category Update Successfully" });
     }
     catch (err) {
         return res.status(500).json({ success: false, message: err.message })
@@ -149,81 +150,159 @@ export const updateProductCategory = async (req, res) => {
 }
 
 export const updateProductCategoryStatus = async (req, res) => {
-    try{
-        const {id} = req.params;
+    try {
+        const { id } = req.params;
 
-        if(!id?.trim()){
-            return res.status(400).json({success:false,message: "CategoryId are required"});
+        if (!id?.trim()) {
+            return res.status(400).json({ success: false, message: "CategoryId are required" });
         }
 
         const categoryDetails = await ProductCategoryModel.findById(id);
 
-        if(!categoryDetails){
-            return res.status(404).json({success:false, message:"Category not  found"});
+        if (!categoryDetails) {
+            return res.status(404).json({ success: false, message: "Category not  found" });
         }
 
         categoryDetails.status = !categoryDetails.status;
 
-        return res.status(200).json({success:true, message: "Status update successfully"});
+        await categoryDetails.save();
+
+        return res.status(200).json({ success: true, message: "Status update successfully" });
 
     }
-    catch(err){
-        return res.status(500).json({success:false, message: err.message});
-    }
-}
-
-export const deleteProductCategory = async(req, res) => {
-    try{
-        const {id} = req.params;
-
-       const products = await ProductModel.findOne({categoryId:id?.trim()});
-
-       if(products){
-        return res.status(400).json({success:false, message:"This category belong to someone products."});
-       }
-
-       const categoryDetails = await ProductCategoryModel.findById(id);
-
-       if(!categoryDetails){
-        return res.status(404).json({success:false, message:"Category is not found"});
-       }
-
-       await deleteFromCloudinary(categoryDetails?.desktopImage);
-       await deleteFromCloudinary(categoryDetails?.mobileImage);
-
-       return res.status(200).json({success:true, message: "Category Delete Successfully"});
-    }
-    catch(err){
-        return res.status(500).json({success:false, message: err.message})
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
 }
 
-export const getProductCategory = async(req, res) => {
-    try{
-        const category = await ProductCategoryModel.find({status:true});
+export const deleteProductCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-        if(category.length){
-            return res.status(404).json({success:false, message: "Product Category not found"});
+        if (!id || !mongoose.Types.ObjectId.isValid(id.trim())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid category ID",
+            });
         }
 
-        return res.status(200).json({success:true, category: category})
+        const categoryId = id.trim();
+
+        const categoryDetails = await ProductCategoryModel.findById(categoryId);
+
+        if (!categoryDetails) {
+            return res.status(404).json({
+                success: false,
+                message: "Category not found",
+            });
+        }
+
+        const products = await ProductModel.findOne({
+            categoryId: categoryId,
+        }).select("_id");
+
+        if (products) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete this category because products are associated with it.",
+            });
+        }
+
+        await ProductCategoryModel.findByIdAndDelete(categoryId);
+
+        try {
+            if (categoryDetails.desktopImage) {
+                await deleteFromCloudinary(categoryDetails.desktopImage);
+            }
+
+            if (categoryDetails.mobileImage) {
+                await deleteFromCloudinary(categoryDetails.mobileImage);
+            }
+        } catch (cloudinaryError) {
+            console.error("Cloudinary deletion failed:", cloudinaryError.message);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Category deleted successfully",
+        });
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message,
+        });
     }
-    catch(err){
-        return res.status(500).json({success:false, message: err.message})
+};
+
+
+export const getProductCategory = async (req, res) => {
+     try {
+
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const skip = (page - 1) * limit;
+
+
+        const [category, total] = await Promise.all([
+            ProductCategoryModel.find({status:true})
+            .sort({createAt:-1})
+            .skip(skip)
+            .limit(limit),
+            ProductCategoryModel.countDocuments({status:true})
+        ])
+
+        if (category.length === 0) {
+            return res.status(404).json({ success: false, message: "Product Category not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            count: category.length,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            category
+        })
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message })
     }
 }
 
 export const getProductCategoryAdmin = async (req, res) => {
-    try{
-        const category = await ProductCategoryModel.find();
+    try {
 
-        if(category.length){
-            return res.status(404).json({success:false, message: "Product Category not found"});
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+
+        const skip = (page - 1) * limit;
+
+
+        const [category, total] = await Promise.all([
+            ProductCategoryModel.find()
+            .sort({createAt:-1})
+            .skip(skip)
+            .limit(limit),
+            ProductCategoryModel.countDocuments()
+        ])
+
+        if (category.length === 0) {
+            return res.status(404).json({ success: false, message: "Product Category not found" });
         }
 
-        return res.status(200).json({success:true, category:category})
+        return res.status(200).json({
+            success: true,
+            count: category.length,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            category
+        })
     }
-    catch(err){
-        return req.status(500).json({success:false, message: err.message})
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message })
     }
 }

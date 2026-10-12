@@ -16,10 +16,9 @@ router.route("/:id").put(upload.fields([
     { name: "mobileImg", maxCount: 1 },
     { name: "desktopImg", maxCount: 1}
 ]), updateProductCategory);
-
-router.route("/status/:id").post(updateProductCategoryStatus);
-router.route("/:id").delete(deleteProductCategory);
 router.route("/dashboard").get(getProductCategoryAdmin);
 router.route("/").get(getProductCategory);
+router.route("/status/:id").patch(updateProductCategoryStatus);
+router.route("/:id").delete(deleteProductCategory);
 
 export default router
