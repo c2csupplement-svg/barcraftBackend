@@ -1,11 +1,23 @@
 import cloudinary from "../config/cloudinary.js";
 
+// Cloudinary rejects characters like ? & # % < > \ in folder/public_id,
+// so turn titles like "Which Mixer Should You Try?" into "which-mixer-should-you-try"
+const sanitizeFolderName = (name) => {
+    return String(name || "")
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 100) || "uploads";
+};
+
 export const uploadToCloudinary = (buffer, folder) => {
     return new Promise((resolve, reject) => {
         cloudinary.uploader
             .upload_stream(
                 {
-                    folder,
+                    folder: sanitizeFolderName(folder),
                     resource_type: "auto",
                 },
                 (error, result) => {
