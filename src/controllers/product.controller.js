@@ -763,7 +763,7 @@ export const searchProduct = async (req, res) => {
         const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const { q } = req.query;
-        
+
         if (!q || !q?.trim()) {
             return res.status(400).json({
                 success: false,
@@ -833,10 +833,10 @@ export const getProductByCategorySlug = async (req, res) => {
             return res.status(400).json({ success: false, message: "Slug is required." });
         };
 
-        const categoryId = await ProductCategoryModel.findOne({ slug: slug })?._id;
+        const categoryId = await ProductCategoryModel.findOne({ slug: slug });
 
         const [products, total] = await Promise.all([
-            ProductModel.find({ categoryId: categoryId })
+            ProductModel.find({ categoryId: categoryId?._id })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -846,7 +846,6 @@ export const getProductByCategorySlug = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            query,
             products,
             pagination: {
                 page,
@@ -857,6 +856,6 @@ export const getProductByCategorySlug = async (req, res) => {
         })
     }
     catch (err) {
-        return req.status(500).json({ success: false, message: err.message })
+        return res.status(500).json({ success: false, message: err.message })
     }
 }
