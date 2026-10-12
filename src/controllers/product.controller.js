@@ -1,117 +1,239 @@
 import ProductModel from "../models/product.model.js";
 import ProductCategoryModel from "../models/productCategory.model.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
+
+
+const parseJSON = (value, defaultValue) => {
+    if (value === undefined || value === null || value === "") {
+        return defaultValue;
+    }
+
+    if (typeof value !== "string") {
+        return value;
+    }
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        throw new Error("Invalid JSON data in request");
+    }
+};
+
+const parseStatus = (value, defaultValue = true) => {
+    if (value === undefined || value === null || value === "") {
+        return defaultValue;
+    }
+
+    if (typeof value === "boolean") {
+        return value;
+    }
+
+    if (value === "true") return true;
+    if (value === "false") return false;
+
+    throw new Error("Status must be true or false");
+};
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const removeCloudinaryImages = async (urls) => {
+    for (const url of urls) {
+        if (!url) continue;
+
+        try {
+            await deleteFromCloudinary(url);
+        } catch (error) {
+            console.error("Cloudinary delete error:", error.message);
+        }
+    }
+};
+
+const uploadImage = async (file, publicId) => {
+    if (!file) return null;
+
+    const result = await uploadToCloudinary(file.buffer, publicId);
+
+    if (!result?.secure_url) {
+        throw new Error("Image upload failed");
+    }
+
+    return result.secure_url;
+};
+
+const uploadVariantImages = async (variants, files, slug) => {
+    const updatedVariants = [...variants];
+
+    for (let i = 0; i < (files || []).length; i++) {
+        const imageUrl = await uploadImage(
+            files[i],
+            `${slug}-variant-${i + 1}`
+        );
+
+        const variantIndex = i;
+
+        if (updatedVariants[variantIndex]) {
+            updatedVariants[variantIndex] = {
+                ...updatedVariants[variantIndex],
+                image: imageUrl
+            };
+        }
+    }
+
+    return updatedVariants;
+};
 
 export const addProduct = async (req, res) => {
+    const uploadedImages = [];
+
     try {
-        const { categoryId, name, slug, description, shortDes, flavour, serve, spirits, pairs,
-            nutrition, intgredient, recipe, variants, seo, faq, status } = req.body;
+        const { categoryId,name,slug, description, shortDes, flavour,serve, spirits,pairs, nutrition,intgredient,recipe, variants,seo,
+            faq,status} = req.body;
 
-        const featureImage = req.files?.featureImage?.[0];
-        const images = req.files?.image?.[0];
-        const bottleImage = req.files?.bottle?.[0];
-
-        if (!categoryId?.trim() || !name?.trim() || !slug?.trim() || !description?.trim() || !shortDes?.trim() || !serve?.trim()) {
+        if ( !categoryId?.trim() || !name?.trim() ||!slug?.trim() ||!description?.trim() ||
+            !shortDes?.trim() ||!serve?.trim()) {
             return res.status(400).json({
                 success: false,
-                message: "Send Required Field"
+                message: "Category, name, slug, description, short description and serving instructions are required"
             });
         }
 
-        if (flavour && Object.keys(flavour).length === 0) {
+        if (!isValidObjectId(categoryId.trim())) {
             return res.status(400).json({
                 success: false,
-                message: "Flavour Required Field"
+                message: "Invalid categoryId"
             });
         }
 
-        if (!images || !featureImage || !bottleImage) {
+        const featureImageFile = req.files?.featureImage?.[0];
+        const imageFile = req.files?.image?.[0];
+        const bottleImageFile = req.files?.bottle?.[0];
+        const variantFiles = req.files?.variant || [];
+
+        if (!featureImageFile || !imageFile || !bottleImageFile) {
             return res.status(400).json({
                 success: false,
-                message: "Mobile and Desktop product images are both required"
+                message: "Feature image, product image and bottle image are required"
+            });
+        }
+
+        const parsedFlavour = parseJSON(flavour, {});
+        const parsedSpirits = parseJSON(spirits, []);
+        const parsedPairs = parseJSON(pairs, []);
+        const parsedNutrition = parseJSON(nutrition, []);
+        const parsedIngredient = parseJSON(intgredient, []);
+        const parsedVariants = parseJSON(variants, []);
+        const parsedSeo = parseJSON(seo, {});
+        const parsedFaq = parseJSON(faq, []);
+        const parsedRecipe = parseJSON(recipe, []);
+
+        if (
+            !parsedFlavour ||
+            typeof parsedFlavour !== "object" ||
+            Array.isArray(parsedFlavour) ||
+            !parsedFlavour.name?.trim() ||
+            !parsedFlavour.des?.trim()
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Flavour name and description are required"
+            });
+        }
+
+        if ( !Array.isArray(parsedSpirits) ||!Array.isArray(parsedPairs) ||
+            !Array.isArray(parsedNutrition) ||!Array.isArray(parsedIngredient) || !Array.isArray(parsedVariants) ||
+            !Array.isArray(parsedFaq) || !Array.isArray(parsedRecipe) ) {
+            return res.status(400).json({
+                success: false,
+                message: "Spirits, pairs, nutrition, ingredients, variants, FAQ and recipe must be arrays"
+            });
+        }
+
+        if ( parsedSpirits.length === 0 ||parsedPairs.length === 0 || parsedNutrition.length === 0 ||
+            parsedIngredient.length === 0 ||parsedVariants.length === 0 || parsedFaq.length === 0 ) {
+            return res.status(400).json({
+                success: false,
+                message: "Spirits, pairs, nutrition, ingredients, variants and FAQ are required"
+            });
+        }
+
+        if (variantFiles.length > parsedVariants.length) {
+            return res.status(400).json({
+                success: false,
+                message: "More variant images were uploaded than variants provided"
             });
         }
 
         const duplicateProduct = await ProductModel.findOne({
-            slug: slug?.trim()
+            slug: slug.trim()
         });
 
         if (duplicateProduct) {
-            return res.status(400).json({
+            return res.status(409).json({
                 success: false,
                 message: "Duplicate Product Slug"
             });
         }
 
-        const parseJSON = (value, defaultValue) => {
-            if (value === undefined || value === null || value === "") {
-                return defaultValue;
+        for (const recipeId of parsedRecipe) {
+            if (!isValidObjectId(recipeId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid recipe ID: ${recipeId}`
+                });
             }
-
-            if (typeof value === "string") {
-                try {
-                    return JSON.parse(value);
-                } catch (error) {
-                    return defaultValue;
-                }
-            }
-
-            return value;
-        };
-
-        const parseFlavour = parseJSON(flavour, {});
-        const parseSpirits = parseJSON(spirits, []);
-        const parsePairs = parseJSON(pairs, []);
-        const parseNutrition = parseJSON(nutrition, []);
-        const parseIngredient = parseJSON(intgredient, []);
-        const parseVariants = parseJSON(variants, []);
-        const parseSeo = parseJSON(seo, {});
-        const parseFaq = parseJSON(faq, []);
-        const parseRecipe = parseJSON(recipe, []);
-
-        if (parseNutrition.length === 0 || parseSpirits.length === 0 || parsePairs.length === 0 || parseIngredient.length === 0 ||
-            parseVariants.length === 0 || parseFaq.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Send Required Field"
-            });
         }
 
-        const imageResult = await uploadToCloudinary(
-            images.buffer,
-            `${name?.trim()}-image`
-        )
+        const featureImageUrl = await uploadImage(
+            featureImageFile,
+            `${slug.trim()}-feature`
+        );
+        uploadedImages.push(featureImageUrl);
 
-        const featureImageResult = await uploadToCloudinary(
-            featureImage.buffer,
-            `${name?.trim()}-feature`
+        const imageUrl = await uploadImage(
+            imageFile,
+            `${slug.trim()}-image`
+        );
+        uploadedImages.push(imageUrl);
+
+        const bottleImageUrl = await uploadImage(
+            bottleImageFile,
+            `${slug.trim()}-bottle`
+        );
+        uploadedImages.push(bottleImageUrl);
+
+        const parsedVariantsWithImages = await uploadVariantImages(
+            parsedVariants,
+            variantFiles,
+            slug.trim()
         );
 
-        const bottleImageResult = await uploadToCloudinary(
-            bottleImage.buffer,
-            `${name?.trim()}-bottle`
-        )
+        const newVariantUrls = parsedVariantsWithImages
+            .filter((variant, index) => variantFiles[index])
+            .map((variant) => variant.image);
+
+        uploadedImages.push(...newVariantUrls);
 
         const product = await ProductModel.create({
-            categoryId: categoryId?.trim(),
-            name: name?.trim(),
-            slug: slug?.trim(),
-            description: description?.trim(),
-            shortDes: shortDes?.trim(),
-            serve: serve?.trim(),
-            image: imageResult.secure_url,
-            featureImage: featureImageResult.secure_url,
-            bottleImage: bottleImageResult.secure_url,
-            flavour: parseFlavour,
-            spirits: parseSpirits,
-            pairs: parsePairs,
-            nutrition: parseNutrition,
-            intgredient: parseIngredient,
-            recipe:parseRecipe,
-            variants: parseVariants,
-            seo: parseSeo,
-            faq: parseFaq,
-            status: status === undefined ? true : status
+            categoryId: categoryId.trim(),
+            name: name.trim(),
+            slug: slug.trim(),
+            description: description.trim(),
+            shortDes: shortDes.trim(),
+            featureImage: featureImageUrl,
+            image: imageUrl,
+            bottleImage: bottleImageUrl,
+            flavour: parsedFlavour,
+            serve: serve.trim(),
+            spirits: parsedSpirits,
+            pairs: parsedPairs,
+            nutrition: parsedNutrition,
+            intgredient: parsedIngredient,
+            variants: parsedVariantsWithImages,
+            recipe: parsedRecipe,
+            seo: parsedSeo,
+            faq: parsedFaq,
+            status: parseStatus(status, true)
         });
 
         return res.status(201).json({
@@ -119,178 +241,371 @@ export const addProduct = async (req, res) => {
             message: "Product added successfully",
             product
         });
+    } catch (error) {
+        await removeCloudinaryImages(uploadedImages);
 
-    } catch (err) {
-        console.error("Add Product Error:", err);
+        console.error("Add Product Error:", error);
 
         return res.status(500).json({
             success: false,
-            message: err.message
+            message: error.message || "Failed to add product"
         });
     }
 };
 
 export const updateProduct = async (req, res) => {
-    try {
+    const uploadedImages = [];
+    const oldImagesToDelete = [];
 
+    try {
         const { id } = req.params;
 
-        const { categoryId, name, slug, description, shortDes, flavour, serve, spirits, pairs,
-            nutrition, intgredient, recipe, variants, seo, faq, status } = req.body;
-
-        const featureImage = req.files?.featureImage?.[0];
-        const image = req.files?.image?.[0];
-        const bottleImage = req.files?.[0];
-
-        if (!id?.trim()) {
-            return res.status(400).json({ success: false, message: "ProductId is required" });
+        if (!id || !isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid Product ID is required"
+            });
         }
 
-        const productDetails = await ProductModel.findById(id);
+        const product = await ProductModel.findById(id);
 
-        if (!productDetails) {
-            return res.status(404).json({ success: false, message: "Product not found" });
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
         }
 
+        const { categoryId,name,slug, description, shortDes, flavour,serve, spirits,pairs, nutrition,intgredient,recipe, variants,seo,
+            faq,status} = req.body;
 
-        const parseJSON = (value, defaultValue) => {
-            if (value === undefined || value === null || value === "") {
-                return defaultValue;
+        const parsedName =
+            name !== undefined ? name.trim() : product.name;
+
+        const parsedSlug =
+            slug !== undefined ? slug.trim() : product.slug;
+
+        if (
+            !parsedName ||
+            !parsedSlug ||
+            (description !== undefined && !description.trim()) ||
+            (shortDes !== undefined && !shortDes.trim()) ||
+            (serve !== undefined && !serve.trim())
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Product name, slug and provided text fields cannot be empty"
+            });
+        }
+
+        if (categoryId !== undefined) {
+            if (!categoryId.trim() || !isValidObjectId(categoryId.trim())) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid categoryId"
+                });
             }
 
-            if (typeof value === "string") {
-                try {
-                    return JSON.parse(value);
-                } catch (error) {
-                    return defaultValue;
+            product.categoryId = categoryId.trim();
+        }
+
+        if (parsedSlug !== product.slug) {
+            const duplicateProduct = await ProductModel.findOne({
+                slug: parsedSlug,
+                _id: { $ne: id }
+            });
+
+            if (duplicateProduct) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Duplicate Product Slug"
+                });
+            }
+        }
+
+        product.name = parsedName;
+        product.slug = parsedSlug;
+
+        if (description !== undefined) {
+            product.description = description.trim();
+        }
+
+        if (shortDes !== undefined) {
+            product.shortDes = shortDes.trim();
+        }
+
+        if (serve !== undefined) {
+            product.serve = serve.trim();
+        }
+
+        if (flavour !== undefined) {
+            const value = parseJSON(flavour, {});
+
+            if (
+                !value ||
+                typeof value !== "object" ||
+                Array.isArray(value)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Flavour must be an object"
+                });
+            }
+
+            product.flavour = value;
+        }
+
+        if (spirits !== undefined) {
+            const value = parseJSON(spirits, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Spirits must be an array"
+                });
+            }
+            product.spirits = value;
+        }
+
+        if (pairs !== undefined) {
+            const value = parseJSON(pairs, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Pairs must be an array"
+                });
+            }
+            product.pairs = value;
+        }
+
+        if (nutrition !== undefined) {
+            const value = parseJSON(nutrition, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Nutrition must be an array"
+                });
+            }
+            product.nutrition = value;
+        }
+
+        if (intgredient !== undefined) {
+            const value = parseJSON(intgredient, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Ingredients must be an array"
+                });
+            }
+            product.intgredient = value;
+        }
+
+        if (variants !== undefined) {
+            const value = parseJSON(variants, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Variants must be an array"
+                });
+            }
+            product.variants = value;
+        }
+
+        if (recipe !== undefined) {
+            const value = parseJSON(recipe, []);
+
+            if (
+                !Array.isArray(value) ||
+                value.some((recipeId) => !isValidObjectId(recipeId))
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Recipe must be an array of valid recipe IDs"
+                });
+            }
+
+            product.recipe = value;
+        }
+
+        if (seo !== undefined) {
+            const value = parseJSON(seo, {});
+
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "SEO must be an object"
+                });
+            }
+
+            product.seo = value;
+        }
+
+        if (faq !== undefined) {
+            const value = parseJSON(faq, []);
+            if (!Array.isArray(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "FAQ must be an array"
+                });
+            }
+            product.faq = value;
+        }
+
+        if (status !== undefined) {
+            product.status = parseStatus(status, product.status);
+        }
+
+        const featureImageFile = req.files?.featureImage?.[0];
+        const imageFile = req.files?.image?.[0];
+        const bottleImageFile = req.files?.bottle?.[0];
+        const variantFiles = req.files?.variant || [];
+
+        const uploadAndReplace = async (file, field, suffix) => {
+            if (!file) return;
+
+            const oldUrl = product[field];
+
+            const newUrl = await uploadImage(
+                file,
+                `${parsedSlug}-${suffix}`
+            );
+
+            uploadedImages.push(newUrl);
+            product[field] = newUrl;
+
+            if (oldUrl) {
+                oldImagesToDelete.push(oldUrl);
+            }
+        };
+
+        await uploadAndReplace(
+            featureImageFile,
+            "featureImage",
+            "feature"
+        );
+
+        await uploadAndReplace(
+            imageFile,
+            "image",
+            "image"
+        );
+
+        await uploadAndReplace(
+            bottleImageFile,
+            "bottleImage",
+            "bottle"
+        );
+
+        if (variantFiles.length > 0) {
+            if (variants === undefined) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Send the variants array when uploading variant images"
+                });
+            }
+
+            const parsedVariants = parseJSON(variants, []);
+
+            if (
+                !Array.isArray(parsedVariants) ||
+                variantFiles.length > parsedVariants.length
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Variant images must match the variants array"
+                });
+            }
+
+            const updatedVariants = [...parsedVariants];
+
+            for (let i = 0; i < variantFiles.length; i++) {
+                const oldUrl = updatedVariants[i]?.image;
+
+                const newUrl = await uploadImage(
+                    variantFiles[i],
+                    `${parsedSlug}-variant-${i + 1}`
+                );
+
+                uploadedImages.push(newUrl);
+
+                updatedVariants[i] = {
+                    ...updatedVariants[i],
+                    image: newUrl
+                };
+
+                if (oldUrl) {
+                    oldImagesToDelete.push(oldUrl);
                 }
             }
 
-            return value;
-        };
-
-
-        const parseFlavour = parseJSON(flavour, {});
-        const parseSpirits = parseJSON(spirits, []);
-        const parsePairs = parseJSON(pairs, []);
-        const parseNutrition = parseJSON(nutrition, []);
-        const parseIngredient = parseJSON(intgredient, []);
-        const parseVariants = parseJSON(variants, []);
-        const parseSeo = parseJSON(seo, {});
-        const parseFaq = parseJSON(faq, []);
-        const parseRecipe = parseJSON(recipe,[])
-
-        if (categoryId?.trim()) {
-            productDetails.categoryId = categoryId?.trim();
-        };
-        if (name?.trim()) {
-            productDetails.name = name?.trim();
-        };
-        if (slug?.trim()) {
-            productDetails.slug = slug?.trim();
-        };
-        if (description?.trim()) {
-            productDetails.description = description?.trim();
-        };
-        if (shortDes?.trim()) {
-            productDetails.shortDes = shortDes?.trim();
-        };
-        if (serve?.trim()) {
-            productDetails.serve = serve?.trim();
+            product.variants = updatedVariants;
         }
-        if (flavour && Object.keys(flavour).length > 0) {
-            productDetails.flavour = parseFlavour
-        };
-        if (parseNutrition.length !== 0) {
-            productDetails.nutrition = parseIngredient
-        };
-        if (parseSpirits.length !== 0) {
-            productDetails.spirits = parseSpirits;
-        };
-        if (parsePairs.length !== 0) {
-            productDetails.pairs = parsePairs;
-        };
-        if (parseVariants.length !== 0) {
-            productDetails.variants = parseVariants
-        };
-        if (parseSeo) {
-            productDetails.seo = parseSeo;
-        };
-        if (parseFaq.length !== 0) {
-            productDetails.faq = parseFaq
-        };
-        if(parseRecipe.length !== 0){
-            productDetails.recipe = parseRecipe;
-        }
-        if (featureImage) {
-            const oldFeaturedImage = productDetails.featureImage;
 
-            productDetails.featureImage = await uploadToCloudinary(
-                featureImage.buffer,
-                `${name?.trim()}-feature`
-            );
+        await product.save();
 
-            if(oldFeaturedImage){
-                await deleteFromCloudinary(oldFeaturedImage)
-            }
-        };
-        if (image) {
-            const oldImage = productDetails.image;
+        await removeCloudinaryImages(oldImagesToDelete);
 
-            productDetails.image = await uploadToCloudinary(
-                image.buffer,
-                `${name?.trim()}-image`
-            );
+        return res.status(200).json({
+            success: true,
+            message: "Product updated successfully",
+            product
+        });
+    } catch (error) {
+        await removeCloudinaryImages(uploadedImages);
 
-            if(oldImage){
-                await deleteFromCloudinary(oldImage)
-            }
-        };
-        if(bottleImage){
-            const oldImage = productDetails.bottleImage;
+        console.error("Update Product Error:", error);
 
-            productDetails.bottleImage = await uploadToCloudinary(
-                bottleImage.buffer,
-                `${name?.trim()}-bottle`
-            );
-
-            if(oldImage){
-                await deleteFromCloudinary(oldImage)
-            }
-        }
-        if (status !== undefined) {
-            productDetails.status = status
-        };
-
-        await productDetails.save();
-
-        res.status(200).json({ success: true, message: "Product Update Successfully" });
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to update product"
+        });
     }
-    catch (err) {
-        return res.status(500).json({ success: false, message: err.message })
-    }
-}
+};
 
 export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id?.trim()) {
-            return res.status(400).json({ success: false, message: "ProductId is required" });
+        if (!id || !isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid Product ID is required"
+            });
         }
 
-        const productDetail = await ProductModel.findByIdAndDelete(id);
+        const product = await ProductModel.findById(id);
 
-        if (!productDetail) {
-            return res.status(404).json({ success: false, message: "Product not found" });
-        };
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
 
-        return res.status(200).json({ success: true, message: "Product Delete Successfully" });
+        const imageUrls = [
+            product.featureImage,
+            product.image,
+            product.bottleImage,
+            ...(product.variants || []).map((variant) => variant.image)
+        ].filter(Boolean);
+
+        await ProductModel.findByIdAndDelete(id);
+
+        await removeCloudinaryImages(imageUrls);
+
+        return res.status(200).json({
+            success: true,
+            message: "Product deleted successfully"
+        });
+    } catch (error) {
+        console.error("Delete Product Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to delete product"
+        });
     }
-    catch (err) {
-        return res.status(500).json({ success: false, message: err.message })
-    }
-}
+};
+
 
 export const updateProductStatus = async (req, res) => {
     try {
@@ -307,7 +622,7 @@ export const updateProductStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
 
-        productDetails.status = status;
+        productDetails.status = !productDetails.status;
 
         await productDetails.save();
 
@@ -340,7 +655,7 @@ export const getProductByAdmin = async (req, res) => {
             total,
             page,
             limit,
-            totalPages,
+            totalPages:Math.ceil(total / limit),
             product
         })
     }
@@ -371,7 +686,7 @@ export const getProduct = async (req, res) => {
             total,
             page,
             limit,
-            totalPages,
+            totalPages:Math.ceil(total / limit),
             product
         })
     }
@@ -433,7 +748,7 @@ export const getProductbyCategoryId = async (req, res) => {
             total,
             page,
             limit,
-            totalPages,
+            totalPages:Math.ceil(total / limit),
             product
         })
     }
@@ -448,7 +763,7 @@ export const searchProduct = async (req, res) => {
         const limit = Math.max(parseInt(req.query.limit) || 20, 1);
 
         const { q } = req.query;
-
+        
         if (!q || !q?.trim()) {
             return res.status(400).json({
                 success: false,
@@ -460,7 +775,7 @@ export const searchProduct = async (req, res) => {
 
         const search = q?.trim();
 
-        const searchRegex = new RegExp(query, "i");
+        const searchRegex = new RegExp(search, "i");
 
         const categories = await ProductCategoryModel.find({
             $or: [
@@ -491,7 +806,6 @@ export const searchProduct = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            query,
             products,
             pagination: {
                 page,
