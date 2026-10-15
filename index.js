@@ -14,6 +14,8 @@ import InstagramRouter from "./src/router/instagram.route.js"
 import RecipeParentCategoryRouter from "./src/router/recipeCategory.route.js";
 import RecipeSubCategoryRouter from "./src/router/subRecipecategory.route.js";
 import RecipeRouter from "./src/router/recipe.route.js";
+import BookingRouter from "./src/router/booking.route.js"
+
 
 dotenv.config();
 databaseConfig();
@@ -52,6 +54,7 @@ app.use("/barcraft/api/instagram", InstagramRouter);
 app.use("/barcraft/api/recipe/category/parent", RecipeParentCategoryRouter);
 app.use("/barcraft/api/recipe/category/sub", RecipeSubCategoryRouter);
 app.use("/barcraft/api/recipe", RecipeRouter);
+app.use("/barcraft/api/booking", BookingRouter)
 
 app.listen(port, () => {console.log(`Server run on PORT: ${port}`)})
 
