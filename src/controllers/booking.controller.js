@@ -1,30 +1,52 @@
+import mongoose from "mongoose";
 import BookingModel from "../models/booking.model.js";
+
+const BOOKING_STATUS = ["Processing", "Confirm", "Done", "Cancelled", "Reject"];
+const MAX_LIMIT = 100;
+
+const toStr = (value) => (value === undefined || value === null ? "" : String(value).trim());
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getPagination = (query) => {
+    const page = Math.max(parseInt(query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query.limit) || 10, 1), MAX_LIMIT);
+    return { page, limit, skip: (page - 1) * limit };
+};
 
 export const bookingRegister = async (req, res) => {
     try{
-        const {name, phone, venue, address, guestNumber, date, email, flavour, addon, status} = req.body;
+        const body = req.body || {};
+        const {flavour, addon} = body;
+        const name = toStr(body.name);
+        const phone = toStr(body.phone);
+        const venue = toStr(body.venue);
+        const address = toStr(body.address);
+        const guestNumber = toStr(body.guestNumber);
+        const date = toStr(body.date);
+        const email = toStr(body.email);
 
-        if(!name?.trim() || !phone?.trim() || !venue?.trim() || !address?.trim() || !guestNumber?.trim() || !date?.trim() || !email?.trim()){
+        if(!name || !phone || !venue || !address || !guestNumber || !date || !email){
             return res.status(400).json({success:false, message:"Send Required Informations."});
         }
 
-        if(flavour.length === 0 || flavour.length > 4){
+        if(!Array.isArray(flavour) || flavour.length === 0 || flavour.length > 4 || !flavour.every((f) => typeof f === "string" && f.trim())){
             return res.status(400).json({success:false, message: "Choose atleast one and less than 5 flavours."});
         };
 
         await BookingModel.create({
-            name:name?.trim(),
-            phone:phone?.trim(),
-            venue: venue?.trim(),
-            address: address?.trim(),
-            guestNumber: guestNumber?.trim(),
-            date:date?.trim(),
-            flavour:flavour,
-            addon:addon,
-            status:status
+            name,
+            phone,
+            venue,
+            address,
+            guestNumber,
+            date,
+            email,
+            flavour: flavour.map((f) => f.trim()),
+            addon: Array.isArray(addon) ? addon.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim()) : [],
         });
 
-        return res.status(200).json({success:true, message: "Registration successfully, our team contact you soon."})
+        return res.status(201).json({success:true, message: "Registration successfully, our team contact you soon."})
     }
     catch(err){
         return res.status(500).json({success:false, message: err.message});
@@ -34,10 +56,18 @@ export const bookingRegister = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
     try{
         const {id} = req.params;
-        const {status} = req.body;
+        const {status} = req.body || {};
 
         if(!id || !status){
             return res.status(400).json({success:false, message:"Booking Id and status both are required."});
+        }
+
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({success:false, message:"Invalid booking id."});
+        }
+
+        if(!BOOKING_STATUS.includes(status)){
+            return res.status(400).json({success:false, message:`Status must be one of: ${BOOKING_STATUS.join(", ")}`});
         }
 
         const bookingDetails = await BookingModel.findById(id);
@@ -59,10 +89,7 @@ export const updateBookingStatus = async (req, res) => {
 
 export const getBooking = async (req, res) => {
     try {
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
-
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPagination(req.query);
 
         const [bookings, total] = await Promise.all([
             BookingModel.find()
@@ -100,6 +127,10 @@ export const deleteBooking = async (req, res) => {
             return res.status(400).json({success:false, message: "Booking id is required"});
         };
 
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({success:false, message:"Invalid booking id."});
+        }
+
         const deleteBookingDetails = await BookingModel.findByIdAndDelete(id);
 
         if(!deleteBookingDetails){
@@ -117,19 +148,16 @@ export const searchBooking = async (req, res) => {
     try {
         const { q } = req.query;
 
-        if (!q || !q?.trim()) {
+        if (typeof q !== "string" || !q.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Search query is required."
             });
         }
 
-        const search = q?.trim();
+        const search = escapeRegex(q.trim());
 
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
-
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPagination(req.query);
 
         const searchQuery = {
             $or: [
