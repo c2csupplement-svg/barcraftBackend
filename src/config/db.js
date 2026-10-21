@@ -10,6 +10,7 @@ export default async function databaseConfig () {
         return db;
     }
     catch(err){
-        console.error("Database Connection Failed.");
+        console.error("Database Connection Failed:", err.message);
+        process.exit(1);
     }
 }

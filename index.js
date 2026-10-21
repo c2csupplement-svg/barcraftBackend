@@ -14,8 +14,7 @@ import InstagramRouter from "./src/router/instagram.route.js"
 import RecipeParentCategoryRouter from "./src/router/recipeCategory.route.js";
 import RecipeSubCategoryRouter from "./src/router/subRecipecategory.route.js";
 import RecipeRouter from "./src/router/recipe.route.js";
-import BookingRouter from "./src/router/booking.route.js"
-
+import BookingRouter from "./src/router/booking.route.js";
 
 dotenv.config();
 databaseConfig();
@@ -54,7 +53,15 @@ app.use("/barcraft/api/instagram", InstagramRouter);
 app.use("/barcraft/api/recipe/category/parent", RecipeParentCategoryRouter);
 app.use("/barcraft/api/recipe/category/sub", RecipeSubCategoryRouter);
 app.use("/barcraft/api/recipe", RecipeRouter);
-app.use("/barcraft/api/booking", BookingRouter)
+app.use("/barcraft/api/booking", BookingRouter);
+
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ success: false, message: "Invalid JSON in request body." });
+  }
+  console.error(err);
+  return res.status(err.status || 500).json({ success: false, message: err.expose ? err.message : "Internal Server Error" });
+});
 
 app.listen(port, () => {console.log(`Server run on PORT: ${port}`)})
 
