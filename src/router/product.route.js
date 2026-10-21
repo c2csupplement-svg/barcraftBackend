@@ -24,10 +24,9 @@ router.route("/:id").put(upload.fields([
 router.route("/status/:id").patch(updateProductStatus);
 router.route("/:id").delete(deleteProduct);
 router.route("/dashboard").get(getProductByAdmin);
+router.route("/search").get(searchProduct)
 router.route("/").get(getProduct);
 router.route("/category/slug/:slug").get(getProductByCategorySlug)
 router.route("/categoryId/:id").get(getProductbyCategoryId);
 router.route("/:slug").get(getProuctBySlug);
-
-
 export default router;
